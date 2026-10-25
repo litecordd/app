@@ -263,6 +263,8 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
   .rail .iconbtn{width:42px!important;height:42px!important;margin-top:4px!important}
   .side{position:fixed;z-index:20;left:56px;top:0;bottom:0;width:min(280px,calc(100vw - 56px));box-shadow:12px 0 32px #0008;transform:translateX(-120%);transition:transform .18s ease}
   .mobile-nav-open .side{transform:translateX(0)}
+  .mobile-nav-open::before{content:'';position:fixed;inset:0;z-index:19;background:#0008}
+  .side{max-width:calc(100vw - 56px)}
   .main{grid-column:2;grid-row:1;min-width:0}
   .members{display:none!important}
   .app,.app.nomembers{grid-template-columns:56px minmax(0,1fr)}
@@ -437,7 +439,7 @@ function renderChannels() {
   $('#channels').replaceChildren(
     h('div', { class: 'chrow' }, h('div', { class: 'chtitle' }, 'Text Channels'),
       h('button', { class: 'iconbtn', title: 'Create channel', 'aria-label': 'Create channel', onclick: openNewChannel }, '+')),
-    ...S.channels.map(c => h('button', {
+    ...(Array.isArray(S.channels) ? S.channels : []).filter(Boolean).map(c => h('button', {
       class: 'ch' + (c.id === S.channelId ? ' on' : '') + (S.unread.has(c.id) ? ' unread' : ''),
       onclick: () => selectChannel(c.id),
     }, h('span', { class: 'hash' }, '#'), c.name, ...(c.badges||[]).map(bid => S.catalog?.badges?.[bid] ? h('span',{class:'badge',title:S.catalog.badges[bid].name,style:`color:${S.catalog.badges[bid].color}`},S.catalog.badges[bid].symbol) : null), S.unread.has(c.id) ? h('span', { class: 'pip' }) : null,
@@ -447,7 +449,7 @@ function renderChannels() {
 function renderServersRail() {
   const rail = $('#serversRail');
   if (!rail) return;
-  rail.replaceChildren(...S.servers.map(s => h('button', {
+  rail.replaceChildren(...(Array.isArray(S.servers) ? S.servers : []).filter(Boolean).map(s => h('button', {
     class: 'srv' + (S.server && S.server.id === s.id ? ' selected' : ''),
     title: s.name, 'aria-label': 'Switch to ' + s.name,
     onclick: () => switchServer(s.id)
@@ -456,10 +458,11 @@ function renderServersRail() {
 async function switchServer(id) {
   try {
     const d = await api('POST', '/api/servers/' + encodeURIComponent(id) + '/select', {});
-    S.server = d.server;
+    S.server = d.server && typeof d.server === 'object' ? d.server : S.server;
+    if (!S.server) throw new Error('The server response did not include a server.');
     // Keep every server in the rail; older server responses may omit the list.
-    S.servers = Array.isArray(d.servers) && d.servers.length ? d.servers : await api('GET', '/api/servers').then(x => x.servers || [d.server]);
-    S.channels = Array.isArray(d.channels) ? d.channels : (d.server.channels || []);
+    S.servers = Array.isArray(d.servers) && d.servers.length ? d.servers.filter(Boolean) : await api('GET', '/api/servers').then(x => Array.isArray(x?.servers) ? x.servers.filter(Boolean) : [S.server]);
+    S.channels = Array.isArray(d.channels) ? d.channels.filter(Boolean) : (Array.isArray(S.server.channels) ? S.server.channels.filter(Boolean) : []);
     S.channelsByServer.set(d.server.id, S.channels);
     S.me = { ...S.me, ...d.me };
     S.users.set(S.me.id, S.me); S.loaded = new Set(); S.messages = new Map(); S.unread = new Set();
@@ -997,7 +1000,7 @@ function tabBadges() {
   const ownedIds = Object.keys(S.catalog.badges).filter(id => owned.has(id));
   const maxShown = owned.has('dev') ? 3 : owned.has('nitro') ? 2 : 1;
   const selectedShown = new Set(Array.isArray(S.me.shownBadges) ? S.me.shownBadges : ownedIds);
-  const shownControls = h('div', { class: 'acct', style: 'padding:14px;margin-bottom:14px' }, h('h3', null, `Show next to name (up to ${maxShown})`), ...ownedIds.map(id => { const b=S.catalog.badges[id]; return h('label',{style:'display:flex;align-items:center;gap:8px;padding:6px 0'},h('input',{type:'checkbox',checked:selectedShown.has(id),onchange:async e=>{const next=new Set(selectedShown);if(e.target.checked){if(next.size>=maxShown){e.target.checked=false;toast(`Your role allows ${maxShown} shown badge(s).`);return;}next.add(id);}else next.delete(id);try{const {me}=await api('PATCH','/api/me',{shownBadges:[...next]});applyMe(me);selectedShown.clear();me.shownBadges.forEach(x=>selectedShown.add(x));renderSettings();}catch(x){toast(x.message,'err');}}}),h('span',{style:`color:${b.color}`},b.symbol),b.name); }));
+  const shownControls = h('div', { class: 'acct', style: 'padding:14px;margin-bottom:14px' }, h('h3', null, `Show next to name (up to ${maxShown})`), ...ownedIds.map(id => { const b=S.catalog.badges[id]; return h('label',{style:'display:flex;align-items:center;gap:8px;padding:6px 0'},h('input',{type:'checkbox',checked:selectedShown.has(id),onchange:async e=>{const next=new Set(selectedShown);if(e.target.checked){if(next.size>=maxShown){e.target.checked=false;toast(`Your role allows ${maxShown} shown badge(s).`);return;}next.add(id);}else next.delete(id);try{const {me}=await api('PATCH','/api/me',{shownBadges:[...next]});applyMe(me);selectedShown.clear();(Array.isArray(me.shownBadges) ? me.shownBadges : []).forEach(x=>selectedShown.add(x));renderSettings();}catch(x){toast(x.message,'err');}}}),h('span',{style:`color:${b.color}`},b.symbol),b.name); }));
   return [h('h2', null, 'Badges'),
     h('p', { class: 'sub' }, 'Choose which badges appear next to your name. Your account tier sets the maximum.'),
     shownControls, h('div', { class: 'bpreview' }, avatar(S.me, 40), nameEl(S.me, 'big')),
@@ -1157,23 +1160,34 @@ $('#openDMs').addEventListener('click',openDMs);
    Boot
    ================================================================ */
 function init(d) {
-  S.me = d.me;
-  S.catalog = d.catalog;
-  S.servers = d.servers || [d.server];
-  S.channels = d.channels; S.channelsByServer.set(d.server.id,d.channels);
-  S.server = d.server;
-  S.users = new Map(d.users.map(u => [u.id, u]));
-  S.me.status = S.me.statusPref === 'invisible' ? 'offline' : S.me.statusPref;
-  S.users.set(S.me.id, S.me);
+  // Normalize bootstrap data so a missing optional field never crashes the UI.
+  d = d && typeof d === 'object' ? d : {};
+  S.me = d.me && typeof d.me === 'object' ? d.me : { id: 'local-user', username: 'User', displayName: 'User', badges: [], shownBadges: [] };
+  S.catalog = d.catalog && typeof d.catalog === 'object' ? d.catalog : { badges: {}, frames: {} };
+  S.catalog.badges = S.catalog.badges && typeof S.catalog.badges === 'object' ? S.catalog.badges : {};
+  const fallbackServer = d.server && typeof d.server === 'object' ? d.server : { id: 'general', name: 'LiteCord', channels: [], level: 0, boosts: 0 };
+  S.server = fallbackServer;
+  S.servers = (Array.isArray(d.servers) ? d.servers : []).filter(s => s && typeof s === 'object');
+  if (!S.servers.some(s => s.id === fallbackServer.id)) S.servers.unshift(fallbackServer);
+  S.channels = (Array.isArray(d.channels) ? d.channels : Array.isArray(fallbackServer.channels) ? fallbackServer.channels : []).filter(c => c && typeof c === 'object');
+  S.channelsByServer = S.channelsByServer instanceof Map ? S.channelsByServer : new Map();
+  S.channelsByServer.set(fallbackServer.id, S.channels);
+  const users = Array.isArray(d.users) ? d.users.filter(u => u && typeof u === 'object' && u.id) : [];
+  S.users = new Map(users.map(u => [u.id, u]));
+  if (S.me.id) S.users.set(S.me.id, S.me);
+  S.me.badges = Array.isArray(S.me.badges) ? S.me.badges : [];
+  S.me.shownBadges = Array.isArray(S.me.shownBadges) ? S.me.shownBadges : [];
+  S.me.status = S.me.statusPref === 'invisible' ? 'offline' : (S.me.statusPref || S.me.status || 'online');
   S.messages = new Map(); S.loaded = new Set(); S.unread = new Set(); S.hadOpen = false;
-  $('#auth').classList.add('hidden');
-  $('#app').classList.remove('hidden');
+  $('#auth')?.classList.add('hidden');
+  $('#app')?.classList.remove('hidden');
   renderServer(); renderServersRail(); renderMembers(); renderUserbar();
-  $('#addServer').addEventListener('click', openCreateServer);
-  if (Array.isArray(d.channels) && d.channels[0]?.id) selectChannel(d.channels[0].id); else { S.channelId = null; renderHeader(); renderMessages(); }
+  const addServer = $('#addServer');
+  if (addServer && !addServer.dataset.bound) { addServer.dataset.bound = '1'; addServer.addEventListener('click', openCreateServer); }
+  if (S.channels[0]?.id) selectChannel(S.channels[0].id);
+  else { S.channelId = null; renderHeader(); renderMessages(); }
   connect();
 }
-
 async function boot() {
   try {
     init(await api('GET', '/api/bootstrap'));
