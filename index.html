@@ -1,0 +1,1096 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nexus</title>
+<style>
+:root{
+  --bg:#313338;--bg2:#2b2d31;--bg3:#1e1f22;--hover:#35373c;--sel:#404249;
+  --text:#dbdee1;--head:#f2f3f5;--muted:#949ba4;--line:#3f4147;
+  --blurple:#5865f2;--blurple-h:#4752c4;--green:#23a55a;--yellow:#f0b232;--red:#f23f43;
+  --r1:10px;--r2:16px;--r3:22px;
+  --sym:"Segoe UI Symbol","Noto Sans Symbols 2","Noto Sans Symbols","Apple Symbols","DejaVu Sans",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.375 "gg sans","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+hr{border:0;border-top:1px solid var(--line);margin:20px 0}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#1a1b1e;border-radius:var(--r2);border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+:focus-visible{outline:2px solid #00a8fc;outline-offset:1px}
+
+/* ---------- shared form bits ---------- */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;color:#b5bac1;margin-bottom:8px}
+.field input[type=text],.field input[type=password],.field input[type=number],.field textarea,.field select{width:100%;background:var(--bg3);border:0;border-radius:var(--r1);padding:10px;outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{box-shadow:0 0 0 2px var(--blurple)}
+.field textarea{resize:vertical}
+.field input[type=color]{width:56px;height:40px;padding:0;border:0;background:none;border-radius:var(--r1);vertical-align:middle}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+.btn{background:var(--blurple);color:#fff;border:0;border-radius:var(--r1);padding:10px 16px;font-weight:600}
+.btn:hover{background:var(--blurple-h)}
+.btn:disabled{opacity:.6;cursor:default}
+.btn.block{display:block;width:100%}
+.btn.danger{background:var(--red)}
+.btn.danger:hover{background:#c93b3e}
+.err{color:#fa777c;font-size:14px;min-height:20px;margin-bottom:8px}
+
+/* ---------- auth ---------- */
+.auth{position:fixed;inset:0;display:grid;place-items:center;padding:16px;overflow:auto;
+  background:radial-gradient(1100px 600px at 15% 0%,#5865f2 0,transparent 60%),radial-gradient(900px 500px at 100% 100%,#eb459e66 0,transparent 60%),#1e1f22}
+.authbox{width:min(480px,100%);background:var(--bg);border-radius:var(--r2);padding:32px;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.authbox h1{margin:0 0 4px;text-align:center;color:var(--head);font-size:24px}
+.authbox .sub{text-align:center;color:var(--muted);margin:0 0 24px}
+.switch{margin-top:14px;font-size:14px;color:var(--muted)}
+.switch a{color:#00a8fc;cursor:pointer}
+.switch a:hover{text-decoration:underline}
+
+/* ---------- avatar + frames ---------- */
+.av{position:relative;width:var(--s);height:var(--s);flex:none;margin:calc(var(--s)*.1)}
+.av .face{position:relative;z-index:1;width:100%;height:100%;border-radius:50%;background:var(--c);color:#fff;display:grid;place-items:center;font-weight:700;font-size:calc(var(--s)*.42);user-select:none;text-transform:uppercase}
+.av .dot{position:absolute;z-index:2;right:-2px;bottom:-2px;width:max(10px,calc(var(--s)*.3));height:max(10px,calc(var(--s)*.3));border-radius:50%;box-shadow:0 0 0 max(2px,calc(var(--s)*.06)) var(--dotbg,var(--bg2))}
+.s-online{background:var(--green)}.s-idle{background:var(--yellow)}.s-dnd{background:var(--red)}.s-offline{background:#80848e}
+
+@keyframes spin{to{transform:rotate(1turn)}}
+@keyframes pulse{50%{filter:drop-shadow(0 0 9px var(--glow))}}
+.rw{position:absolute;inset:-11%;border-radius:50%;pointer-events:none;z-index:0;--glow:#fff;filter:drop-shadow(0 0 3px var(--glow))}
+.rw .ring{position:absolute;inset:0;border-radius:50%;
+  -webkit-mask:radial-gradient(farthest-side,transparent 79%,#000 80%);mask:radial-gradient(farthest-side,transparent 79%,#000 80%)}
+.f-gold{--glow:rgba(240,178,50,.7)}
+.f-gold .ring{background:conic-gradient(#fff1a8,#f0b232,#b8791a,#f0b232,#fff1a8)}
+.f-neon{--glow:#7a5cff}
+.f-neon .ring{background:conic-gradient(#00f0ff,#7a5cff,#ff3df2,#00f0ff);animation:spin 3s linear infinite}
+.f-rainbow{--glow:rgba(255,255,255,.5)}
+.f-rainbow .ring{background:conic-gradient(#ff3b3b,#ff9f1a,#ffe14d,#4cd964,#2ec5ff,#5b5bff,#d94dff,#ff3b3b);animation:spin 6s linear infinite}
+.f-fire{--glow:#ff6a00;animation:pulse 1.4s ease-in-out infinite}
+.f-fire .ring{background:conic-gradient(#ff2d00,#ff9d00,#ffd000,#ff9d00,#ff2d00);animation:spin 2.5s linear infinite}
+.f-ice{--glow:#7fd8ff}
+.f-ice .ring{background:conic-gradient(#e8fbff,#7fd8ff,#3a8dff,#7fd8ff,#e8fbff)}
+.f-pixel{--glow:#43b581}
+.f-pixel .ring{background:repeating-conic-gradient(#43b581 0 15deg,#1e1f22 15deg 30deg)}
+.f-dev{--glow:#f0b232;animation:pulse 2.4s ease-in-out infinite}
+.f-dev .ring{background:conic-gradient(#f0b232,#5865f2,#f0b232,#5865f2,#f0b232);animation:spin 5s linear infinite}
+@media (prefers-reduced-motion:reduce){.rw,.rw .ring{animation:none!important}}
+
+/* ---------- names + badges ---------- */
+.namewrap{display:inline-flex;align-items:center;min-width:0;max-width:100%;vertical-align:middle}
+.namewrap .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.badge{flex:none;margin-left:6px;font-family:var(--sym);font-size:.95em;line-height:1;cursor:help;text-shadow:0 0 6px currentColor}
+.namewrap.big{font-size:20px;font-weight:700;color:var(--head)}
+
+/* ---------- app shell ---------- */
+.app{display:grid;grid-template-columns:72px 240px minmax(0,1fr) 240px;height:100vh;height:100dvh}
+.app.nomembers{grid-template-columns:72px 240px minmax(0,1fr)}
+.app.nomembers .members{display:none}
+.rail{background:var(--bg3);display:flex;flex-direction:column;align-items:center;padding-top:12px}
+.srv{width:48px;height:48px;border-radius:var(--r3);background:var(--blurple);color:#fff;display:grid;place-items:center;font-weight:700;font-size:20px;border:0}
+.side{background:var(--bg2);display:flex;flex-direction:column;min-height:0}
+.side-head{height:48px;flex:none;display:flex;align-items:center;padding:0 16px;font-weight:700;color:var(--head);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.channels{flex:1;overflow:auto;padding:8px}
+.chtitle{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);padding:12px 8px 4px}
+.ch{display:flex;align-items:center;gap:6px;width:100%;padding:6px 8px;border:0;background:none;border-radius:var(--r1);color:var(--muted);text-align:left;font-weight:500}
+.ch:hover{background:var(--hover);color:var(--text)}
+.ch.on{background:var(--sel);color:#fff}
+.ch.unread{color:#fff;font-weight:700}
+.ch .hash{opacity:.7;font-size:20px;line-height:1}
+.ch .pip{margin-left:auto;width:8px;height:8px;border-radius:50%;background:#fff}
+.userbar{--dotbg:#232428;background:#232428;padding:0 8px;height:56px;flex:none;display:flex;align-items:center;gap:4px}
+.userbar .me{flex:1;min-width:0;display:flex;align-items:center;gap:6px;padding:2px 4px;border-radius:var(--r1);border:0;background:none;text-align:left}
+.userbar .me:hover{background:rgba(79,84,92,.4)}
+.me-t{min-width:0;display:flex;flex-direction:column}
+.me-t .namewrap{font-size:14px;font-weight:600;color:var(--head)}
+.me-t small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iconbtn{width:32px;height:32px;display:grid;place-items:center;border:0;background:none;border-radius:var(--r1);color:#b5bac1;font-size:18px}
+.iconbtn:hover{background:rgba(79,84,92,.4);color:#fff}
+
+.main{--dotbg:var(--bg);display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg)}
+.chead{height:48px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;box-shadow:0 1px 0 rgba(0,0,0,.25);font-weight:700;color:var(--head)}
+.chead .hash{color:var(--muted);font-size:24px;font-weight:400}
+.chead .topic{flex:1;min-width:0;font-weight:400;color:var(--muted);font-size:14px;margin-left:6px;padding-left:12px;border-left:1px solid var(--line);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msgs{flex:1;overflow-y:auto;padding:16px 0 8px}
+.welcome{padding:16px 16px 8px;color:var(--muted)}
+.welcome h2{margin:0 0 4px;color:var(--head)}
+.divider{display:flex;align-items:center;gap:8px;margin:24px 16px 8px;color:var(--muted);font-size:12px;font-weight:600}
+.divider::before,.divider::after{content:"";height:1px;background:var(--line);flex:1}
+.msg{display:flex;align-items:flex-start;gap:16px;padding:2px 16px;margin-top:17px}
+.msg:hover{background:rgba(2,2,2,.06)}
+.msg.compact{position:relative;margin-top:0;padding-left:80px}
+.ctime{position:absolute;left:16px;width:48px;text-align:right;font-size:11px;color:var(--muted);line-height:22px;visibility:hidden}
+.msg.compact:hover .ctime{visibility:visible}
+.mav{flex:none;cursor:pointer}
+.mbody{min-width:0;flex:1}
+.mhead{display:flex;align-items:baseline;gap:8px}
+.mname{font-weight:500;color:var(--head);cursor:pointer;min-width:0}
+.mname:hover .nm{text-decoration:underline}
+.mhead time{font-size:12px;color:var(--muted);flex:none}
+.mtext{white-space:pre-wrap;overflow-wrap:anywhere}
+.composer{padding:0 16px 24px;flex:none}
+.composer input{width:100%;background:#383a40;border:0;border-radius:var(--r2);padding:11px 16px;outline:none}
+
+.members{--dotbg:var(--bg2);background:var(--bg2);overflow:auto;padding:8px}
+.mh{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);padding:16px 8px 4px}
+.mem{display:flex;align-items:center;gap:8px;width:100%;height:42px;padding:0 8px;border:0;background:none;border-radius:var(--r1);text-align:left}
+.mem:hover{background:var(--hover)}
+.mem .namewrap{font-weight:500;color:#b5bac1}
+.mem:hover .namewrap{color:#fff}
+.mem.off .av,.mem.off .namewrap{opacity:.45}
+
+/* ---------- profile card ---------- */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:grid;place-items:center;z-index:50;padding:16px;overflow:auto}
+.pcard{--dotbg:#111214;position:relative;width:340px;max-width:100%;background:#111214;border-radius:var(--r2);overflow:hidden;padding-bottom:12px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.pcard .banner{height:72px}
+.pav{position:absolute;top:18px;left:8px}
+.pspacer{height:52px}
+.pbody{margin:0 12px;background:#232428;border-radius:var(--r2);padding:12px}
+.pname{margin-bottom:2px}
+.puser{color:#b5bac1;font-size:14px}
+.pbody h4{margin:14px 0 4px;font-size:12px;text-transform:uppercase;color:#b5bac1}
+.pbody p{margin:0;font-size:14px}
+.pbio{white-space:pre-wrap;overflow-wrap:anywhere}
+.chips{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:#111214;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
+.chip .sym{color:var(--bc);font-family:var(--sym);font-size:14px}
+
+/* ---------- settings ---------- */
+.settings{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex}
+.snav{flex:1 0 218px;background:var(--bg2);display:flex;justify-content:flex-end;overflow:auto}
+.snav-in{width:218px;padding:60px 6px 60px 20px}
+.snav-h{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);padding:6px 10px}
+.snav-i{display:block;width:100%;text-align:left;padding:6px 10px;margin-bottom:2px;border:0;border-radius:var(--r1);background:none;color:#b5bac1;font-weight:500}
+.snav-i:hover{background:var(--hover);color:var(--text)}
+.snav-i.on{background:var(--sel);color:#fff}
+.snav-i.danger{color:#fa777c}
+.scontent{flex:1 1 800px;overflow:auto}
+.scontent-in{max-width:740px;padding:60px 40px 80px}
+.scontent h2{margin:0 0 20px;color:var(--head);font-size:20px}
+.scontent h3{margin:24px 0 12px;color:var(--head);font-size:16px}
+.sub{color:var(--muted);margin:-12px 0 20px;font-size:14px}
+.sclose{position:fixed;top:56px;right:56px;width:36px;height:36px;border-radius:50%;border:2px solid #80848e;background:none;color:#b5bac1;display:grid;place-items:center;font-size:14px}
+.sclose:hover{background:rgba(255,255,255,.08);color:#fff}
+.acct{--dotbg:#1e1f22;background:#1e1f22;border-radius:var(--r2);overflow:hidden;margin-bottom:24px}
+.acct .banner{height:96px}
+.acct-row{display:flex;align-items:center;gap:12px;padding:12px 16px 16px}
+.acct-row .av{margin-top:-44px}
+.prof{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;align-items:start}
+.ph{font-size:12px;font-weight:700;text-transform:uppercase;color:#b5bac1;margin-bottom:8px}
+.swatches{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.sw{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.2);padding:0}
+.sw:hover{border-color:#fff}
+.frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.ftile{--dotbg:var(--bg2);background:var(--bg2);border:2px solid transparent;border-radius:var(--r2);padding:22px 8px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.ftile:hover:not(:disabled){background:var(--hover)}
+.ftile.on{border-color:var(--blurple)}
+.ftile:disabled{opacity:.55;cursor:not-allowed}
+.fname{font-weight:600;color:var(--head);font-size:14px}
+.fsub{font-size:12px;color:var(--muted)}
+.bpreview{display:flex;align-items:center;gap:8px;background:var(--bg2);border-radius:var(--r2);padding:12px 16px;margin-bottom:20px}
+.badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.bcard{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid transparent;border-radius:var(--r2);padding:14px}
+.bcard:not(.has){opacity:.55}
+.bcard.has{border-color:rgba(240,178,50,.35)}
+.bsym{width:48px;text-align:center;font-size:34px;font-family:var(--sym);text-shadow:0 0 10px currentColor}
+.bname{font-weight:700;color:var(--head)}
+.bdesc{font-size:13px;color:var(--muted)}
+.bstate{font-size:12px;margin-top:4px;color:#b5bac1}
+
+#toasts{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:100;align-items:center}
+.toast{background:#111214;border-left:4px solid var(--green);border-radius:var(--r1);padding:10px 16px;box-shadow:0 4px 14px rgba(0,0,0,.5);font-size:14px}
+.toast.err{border-color:var(--red)}
+
+/* server switcher */
+.servers-rail{display:flex;flex-direction:column;align-items:center;gap:10px}
+.rail .srv{flex:none;width:48px;height:48px;border-radius:18px;margin:0;background:#35373c;color:#fff;font-size:20px;font-weight:700;border:0;transition:border-radius .12s,background .12s}
+.rail .srv:hover,.rail .srv.selected{border-radius:14px;background:#5865f2}
+.rail .srv.selected{box-shadow:0 0 0 2px rgba(255,255,255,.65)}
+.rail .add-server{color:#3ba55d;font-size:28px;background:#35373c}
+.rail .add-server:hover{background:#3ba55d;color:#fff}
+.rail{overflow-y:auto;gap:10px}
+.rail #openDMs{flex:none}
+/* nexus additions */
+.msg{border-radius:var(--r1)}
+.side-head{width:100%;border:0;background:var(--bg2);text-align:left;justify-content:space-between;gap:8px;font-size:16px}
+.side-head:hover{background:var(--hover)}
+.side-head small{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.12)}
+.side-head.lv1{background:linear-gradient(135deg,#3b3f8f,var(--bg2))}
+.side-head.lv2{background:linear-gradient(135deg,#7a3b8f,#3b3f8f 60%,var(--bg2))}
+.side-head.lv3{background:linear-gradient(135deg,#d64f9a,#7a3b8f 45%,#3b3f8f 75%,var(--bg2))}
+.srv.lv1{box-shadow:0 0 0 3px #5865f2}.srv.lv2{box-shadow:0 0 0 3px #b45cff}.srv.lv3{box-shadow:0 0 0 3px #ff73fa,0 0 14px #ff73fa}
+.chrow{display:flex;align-items:center;padding-right:4px}
+.chrow .chtitle{flex:1}
+.ch .x{display:none;margin-left:auto;padding:0 4px;font-size:12px}
+.ch:hover .x{display:block}.ch .x:hover{color:var(--red)}
+.av .face.img{background-size:cover;background-position:center}
+.av .face .emo{font-size:calc(var(--s)*.52);line-height:1}
+.avpick{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.avpick .pv{width:44px;height:44px;border-radius:50%;border:2px solid transparent;background:var(--bg3);font-size:24px;padding:0;line-height:1}
+.avpick .pv:hover{border-color:var(--blurple)}
+.btn.sec{background:#4e5058}.btn.sec:hover{background:#5d6069}
+.panel{width:min(460px,100%);background:var(--bg);border-radius:var(--r3);padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.panel h2{margin:0 0 6px;color:var(--head)}
+.bar{height:10px;border-radius:999px;background:var(--bg3);overflow:hidden;margin:12px 0 6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#5865f2,#ff73fa)}
+.perk{display:flex;gap:8px;padding:8px 12px;border-radius:var(--r1);background:var(--bg2);margin-bottom:6px;font-size:14px;color:var(--muted)}
+.perk.on{color:var(--text);outline:1px solid #ff73fa88}
+.row{display:flex;gap:8px;margin-top:14px}
+.guess{display:flex;justify-content:space-between;background:var(--bg2);border-radius:var(--r1);padding:8px 14px;margin-bottom:6px}
+.hot{color:#ff9d42;font-weight:600}.cold{color:#7fd8ff;font-weight:600}
+.f-aurora{--glow:#7fffd4}
+.f-aurora .ring{background:conic-gradient(#7fffd4,#7b8cff,#ff73fa,#7fffd4);animation:spin 4s linear infinite}
+@media (max-width:860px){
+  .app,.app.nomembers{grid-template-columns:190px minmax(0,1fr)}
+  .rail,.members{display:none}
+}
+@media (max-width:700px){
+  .snav{flex:0 0 150px}
+  .snav-in{width:150px;padding:48px 6px 0}
+  .scontent-in{padding:48px 16px 60px}
+  .prof{grid-template-columns:1fr}
+  .sclose{top:10px;right:10px}
+  .authbox{padding:24px}
+}
+</style>
+</head>
+<body>
+
+<div id="auth" class="auth hidden"><div id="authbox" class="authbox"></div></div>
+
+<div id="app" class="app hidden">
+  <nav class="rail"><div id="serversRail" class="servers-rail"></div><button class="srv add-server" id="addServer" title="Create server" aria-label="Create server">+</button><button class="iconbtn" id="openDMs" title="Private messages" style="margin-top:12px;width:48px;height:48px;font-size:22px;background:#35373c;border-radius:18px">✉</button></nav>
+  <aside class="side">
+    <button class="side-head" id="srvhead" title="Boost this server"></button>
+    <div class="channels" id="channels"></div>
+    <div class="userbar" id="userbar"></div>
+  </aside>
+  <main class="main">
+    <header class="chead">
+      <span class="hash">#</span><span id="chname"></span>
+      <span class="topic" id="chtopic"></span>
+      <button class="iconbtn" id="toggleMembers" title="Show or hide members">☰</button>
+    </header>
+    <div class="msgs" id="msgs"></div>
+    <form class="composer" id="composer">
+      <input id="msginput" type="text" maxlength="2000" autocomplete="off" placeholder="Message">
+    </form>
+  </main>
+  <aside class="members" id="members"></aside>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toasts"></div>
+
+<script>
+'use strict';
+
+/* ================================================================
+   Small helpers
+   ================================================================ */
+const $ = (sel, root = document) => root.querySelector(sel);
+
+// Build DOM without innerHTML, so user text can never become markup.
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  if (props) for (const [k, v] of Object.entries(props)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+
+async function api(method, url, body) {
+  const opt = { method, headers: { 'Content-Type': 'application/json' } };
+  if (method !== 'GET') opt.body = JSON.stringify(body || {});
+  const r = await fetch(url, opt);
+  let data = null;
+  try { data = await r.json(); } catch { /* no body */ }
+  if (!r.ok) {
+    const e = new Error((data && data.error) || 'Request failed.');
+    e.status = r.status;
+    throw e;
+  }
+  return data;
+}
+
+function toast(msg, type = '') {
+  const t = h('div', { class: 'toast ' + type, role: 'status' }, msg);
+  $('#toasts').append(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+const timeStr = ts => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+/* ================================================================
+   State
+   ================================================================ */
+const STATUS_OPTS = [['online', 'Online'], ['idle', 'Idle'], ['dnd', 'Do Not Disturb'], ['invisible', 'Invisible']];
+const SWATCHES = ['#5865f2', '#3ba55d', '#faa61a', '#ed4245', '#eb459e', '#1abc9c', '#9b59b6', '#e67e22', '#4e5058'];
+const GHOST = { username: 'unknown', displayName: 'Unknown user', avatarColor: '#4e5058', accent: '#4e5058',
+  frame: 'none', badges: [], bio: '', status: 'offline', createdAt: 0 };
+
+const S = {
+  me: null, catalog: null, servers: [], server: null, channels: [], channelsByServer: new Map(), channelId: null,
+  users: new Map(), messages: new Map(), loaded: new Set(), unread: new Set(),
+  es: null, hadOpen: false, modal: null, settings: null,
+};
+const getUser = id => S.users.get(id) || { ...GHOST, id };
+
+/* ================================================================
+   Building blocks: avatar (with frame), name (with badges)
+   ================================================================ */
+function avatar(u, size = 40, { status = false } = {}) {
+  const el = h('div', { class: 'av', style: `--s:${size}px;--c:${u.avatarColor}` });
+  if (u.frame && u.frame !== 'none') {
+    el.append(h('div', { class: 'rw f-' + u.frame }, h('div', { class: 'ring' })));
+  }
+  const a = u.avatar || '', emo = a.startsWith('preset:') && S.catalog.presets[a.slice(7)];
+  el.append(a.startsWith('/api/avatar/') ? h('div', { class: 'face img', style: `background-image:url(${a})` })
+    : emo ? h('div', { class: 'face' }, h('span', { class: 'emo' }, emo))
+    : h('div', { class: 'face' }, [...String(u.displayName || u.username || '?').trim()][0] || '?'));
+  if (status) el.append(h('span', { class: 'dot s-' + (u.status || 'offline') }));
+  return el;
+}
+
+// Display name followed by its badges, e.g.  Alex ⛊
+function nameEl(u, cls = '') {
+  const badges = (u.badges || []).map(id => S.catalog.badges[id]).filter(Boolean).map(b =>
+    h('span', { class: 'badge', title: b.name, 'aria-label': b.name + ' badge', style: `color:${b.color}` }, b.symbol));
+  return h('span', { class: 'namewrap ' + cls }, h('span', { class: 'nm' }, u.displayName), badges);
+}
+
+function profileCard(u) {
+  const joined = new Date(u.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  const badges = (u.badges || []).map(id => S.catalog.badges[id]).filter(Boolean);
+  return h('div', { class: 'pcard' },
+    h('div', { class: 'banner', style: `background:${u.accent}` }),
+    h('div', { class: 'pav' }, avatar(u, 88, { status: true })),
+    h('div', { class: 'pspacer' }),
+    h('div', { class: 'pbody' },
+      h('div', { class: 'pname' }, nameEl(u, 'big')),
+      h('div', { class: 'puser' }, '@' + u.username),
+      badges.length ? h('div', { class: 'chips' }, badges.map(b =>
+        h('span', { class: 'chip', title: b.description, style: `--bc:${b.color}` }, h('span', { class: 'sym' }, b.symbol), b.name))) : null,
+      u.bio ? [h('h4', null, 'About me'), h('p', { class: 'pbio' }, u.bio)] : null,
+      h('h4', null, 'Member since'), h('p', null, joined)));
+}
+
+/* ================================================================
+   Rendering the app shell
+   ================================================================ */
+function statusLabel(u) { return (STATUS_OPTS.find(o => o[0] === u.statusPref) || [, 'Online'])[1]; }
+
+const canDelete = c => c.id !== 'general' && (c.createdBy === S.me.id || S.me.badges.includes('dev'));
+function renderChannels() {
+  $('#channels').replaceChildren(
+    h('div', { class: 'chrow' }, h('div', { class: 'chtitle' }, 'Text Channels'),
+      h('button', { class: 'iconbtn', title: 'Create channel', 'aria-label': 'Create channel', onclick: openNewChannel }, '+')),
+    ...S.channels.map(c => h('button', {
+      class: 'ch' + (c.id === S.channelId ? ' on' : '') + (S.unread.has(c.id) ? ' unread' : ''),
+      onclick: () => selectChannel(c.id),
+    }, h('span', { class: 'hash' }, '#'), c.name, ...(c.badges||[]).map(bid => S.catalog.badges[bid] ? h('span',{class:'badge',title:S.catalog.badges[bid].name,style:`color:${S.catalog.badges[bid].color}`},S.catalog.badges[bid].symbol) : null), S.unread.has(c.id) ? h('span', { class: 'pip' }) : null,
+      canDelete(c) ? h('span', { class: 'x', title: 'Delete channel', onclick: e => { e.stopPropagation(); delChannel(c); } }, '✕') : null)));
+}
+
+function renderServersRail() {
+  const rail = $('#serversRail');
+  if (!rail) return;
+  rail.replaceChildren(...S.servers.map(s => h('button', {
+    class: 'srv' + (S.server && S.server.id === s.id ? ' selected' : ''),
+    title: s.name, 'aria-label': 'Switch to ' + s.name,
+    onclick: () => switchServer(s.id)
+  }, [...s.name.trim()][0]?.toUpperCase() || 'S')));
+}
+async function switchServer(id) {
+  try {
+    const d = await api('POST', '/api/servers/' + encodeURIComponent(id) + '/select', {});
+    S.server = d.server;
+    // Keep every server in the rail; older server responses may omit the list.
+    S.servers = Array.isArray(d.servers) && d.servers.length ? d.servers : await api('GET', '/api/servers').then(x => x.servers || [d.server]);
+    S.channels = Array.isArray(d.channels) ? d.channels : (d.server.channels || []);
+    S.channelsByServer.set(d.server.id, S.channels);
+    S.me = { ...S.me, ...d.me };
+    S.users.set(S.me.id, S.me); S.loaded = new Set(); S.messages = new Map(); S.unread = new Set();
+    S.channelId = S.channels[0]?.id || null;
+    renderServersRail(); renderAll();
+    if (S.channelId) await selectChannel(S.channelId);
+  } catch (e) { toast(e.message, 'err'); }
+}
+function openCreateServer() {
+  const name = h('input', { type: 'text', maxlength: 40, placeholder: 'My server', required: true });
+  const err = h('div', { class: 'err', role: 'alert' });
+  const form = h('form', { onsubmit: async e => {
+    e.preventDefault(); err.textContent = '';
+    try {
+      const d = await api('POST', '/api/servers', { name: name.value });
+      S.servers = Array.isArray(d.servers) ? d.servers : await api('GET', '/api/servers').then(x => x.servers || [d.server]);
+      S.server = d.server; S.channels = Array.isArray(d.server?.channels) ? d.server.channels : [];
+      S.channelsByServer.set(S.server.id, S.channels);
+      S.me = { ...S.me, ...d.me }; S.users.set(S.me.id, S.me);
+      S.channelId = S.channels[0]?.id || null; S.loaded = new Set(); S.messages = new Map(); S.unread = new Set();
+      closeModal(); renderServersRail(); renderAll(); if (S.channelId) await selectChannel(S.channelId);
+      toast('Server created');
+    } catch (x) { err.textContent = x.message; }
+  } }, field('Server name', name, 'Create a separate space with its own channels, messages and boosts.'), err,
+      h('button', { class: 'btn block', type: 'submit' }, 'Create server'));
+  openModal(h('div', { class: 'panel' }, h('h2', null, 'Create a server'), form));
+  name.focus();
+}
+function renderServer() {
+  const s = S.server;
+  const b = $('#srvhead');
+  if (!s) { b.className = 'side-head'; b.replaceChildren('Nexus'); return; }
+  b.className = 'side-head lv' + (s.level || 0);
+  b.replaceChildren(s.name, h('small', null, s.level ? 'Level ' + s.level : '❖ ' + s.boosts));
+  $('#srvhead').title = 'Boost this server';
+  $('.side .side-head').className = 'side-head lv' + s.level;
+  renderServersRail();
+}
+
+function openNewChannel() {
+  const nm = h('input', { type: 'text', maxlength: 24, placeholder: 'new-channel', required: true });
+  const tp = h('input', { type: 'text', maxlength: 100, placeholder: 'Optional' });
+  const roleChecks = h('div', { class: 'acct', style: 'padding:12px;display:grid;gap:8px' },
+    h('div', { class: 'hint' }, 'Who can send messages? Leave all unchecked to allow everyone.'),
+    ...(S.server.roles||[]).map(r => { const cb=h('input',{type:'checkbox',value:r.id}); return h('label',{style:'display:flex;gap:8px;align-items:center;text-transform:none;font-size:14px'},cb,h('span',{style:`color:${r.color}`},r.name)); }));
+  const badgeChecks = h('div', { class: 'acct', style: 'padding:12px;display:grid;gap:8px' },
+    h('div', { class: 'hint' }, 'Optional badges shown beside this channel.'),
+    ...Object.values(S.catalog.badges).map(b => { const cb=h('input',{type:'checkbox',value:b.id}); return h('label',{style:'display:flex;gap:8px;align-items:center;text-transform:none;font-size:14px'},cb,h('span',{style:`color:${b.color}`},b.symbol+' '+b.name)); }));
+  const err = h('div', { class: 'err', role: 'alert' });
+  const form = h('form', { onsubmit: async e => {
+    e.preventDefault(); err.textContent = '';
+    try {
+      const writeRoles=[...roleChecks.querySelectorAll('input:checked')].map(x=>x.value);
+      const badges=[...badgeChecks.querySelectorAll('input:checked')].map(x=>x.value);
+      const { channel } = await api('POST', '/api/channels', { name: nm.value, topic: tp.value, writeRoles, badges });
+      if (!S.channels.some(c => c.id === channel.id)) S.channels.push(channel);
+      S.channelsByServer.set(S.server.id,S.channels); closeModal(); renderChannels(); selectChannel(channel.id);
+    } catch (x) { err.textContent = x.message; }
+  } }, field('Channel name', nm, `${S.channels.length} of ${S.server.channelCap} channels used. Boosting the server raises the limit.`),
+     field('Topic', tp), field('Roles allowed to type',roleChecks), field('Channel badges',badgeChecks), err, h('button', { class: 'btn block', type: 'submit' }, 'Create channel'));
+  openModal(h('div', { class: 'panel' }, h('h2', null, 'Create channel'), form));
+  nm.focus();
+}
+
+async function delChannel(c) {
+  if (!confirm(`Delete #${c.name} and all its messages?`)) return;
+  try { await api('DELETE', '/api/channels/' + c.id); } catch (e) { toast(e.message, 'err'); }
+}
+
+function openBoost() {
+  const s = S.server, me = S.me, left = me.boostSlots - me.boostsUsed, next = s.levels[s.level + 1];
+  const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const perks = [1, 2, 3].map(i => h('div', { class: 'perk' + (s.level >= i ? ' on' : '') }, h('b', null, 'Level ' + i),
+    `${pl(s.levels[i], 'boost')} · up to ${s.caps[i]} channels · richer header${i === 3 ? ' + glowing icon' : ''}`));
+  openModal(h('div', { class: 'panel' },
+    h('h2', null, s.name), h('div', { class: 'hint', style: 'margin:0 0 8px' }, `${pl(s.boosts, 'boost')} · Level ${s.level}`),
+    next != null ? [h('div', { class: 'bar' }, h('i', { style: `width:${Math.min(100, s.boosts / next * 100)}%` })),
+      h('div', { class: 'hint', style: 'margin:0 0 12px' }, `${pl(next - s.boosts, 'more boost')} to reach Level ${s.level + 1}`)]
+      : h('div', { class: 'hint', style: 'margin-bottom:12px' }, 'Max level reached.'),
+    perks,
+    h('p', { class: 'hint' }, `You’re using ${me.boostsUsed} of ${me.boostSlots} boosts.${me.badges.includes('nitro') ? '' : ' Nitro gives you 2 more.'} Boosters get the ❖ badge.`),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn', disabled: left <= 0, onclick: () => boost('POST') }, left > 0 ? 'Boost this server' : 'No boosts left'),
+      me.boostsUsed ? h('button', { class: 'btn sec', onclick: () => boost('DELETE') }, 'Remove a boost') : null)));
+}
+async function boost(method) {
+  try {
+    const r = await api(method, '/api/boost');
+    S.server = r.server; renderServer(); applyMe(r.me);
+    toast(method === 'POST' ? 'Server boosted' : 'Boost removed');
+    openBoost();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+function pickImage(f, done) {
+  if (!f) return;
+  const img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const ctx = c.getContext('2d'), side = Math.min(img.width, img.height);
+    ctx.fillStyle = '#1e1f22'; ctx.fillRect(0, 0, 128, 128);
+    ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 128, 128);
+    URL.revokeObjectURL(url);
+    done({ image: c.toDataURL('image/jpeg', 0.88) });
+  };
+  img.onerror = () => toast('That file isn’t a readable image.', 'err');
+  img.src = url;
+}
+
+function tabNitro() {
+  const box = h('div');
+  const isHot = t => ['Warmer', 'Burning hot', 'Hot', 'Warm'].includes(t);
+  const draw = st => {
+    if (st.hasNitro) {
+      box.replaceChildren(h('div', { class: 'bpreview' }, avatar(S.me, 40), nameEl(S.me, 'big')),
+        h('p', null, 'You have Nitro: the ✦ badge, the Nitro Aurora frame, 4000-character messages and 2 extra server boosts.'));
+      return;
+    }
+    const left = st.total - st.guesses.length, max = S.catalog.nitro.max;
+    const input = h('input', { type: 'number', min: 1, max, step: 1, required: true, placeholder: `1–${max}` });
+    const err = h('div', { class: 'err', role: 'alert' });
+    const waiting = !st.active && st.waitMs > 0;
+    box.replaceChildren(
+      h('p', { class: 'sub', style: 'margin-top:-8px' }, `Nitro is free. Guess my number from 1 to ${max} in ${st.total} tries. After each guess I’ll say warmer or colder.`),
+      ...st.guesses.map((g, i) => h('div', { class: 'guess' }, h('span', null, `#${i + 1} · ${g.n}`), h('span', { class: isHot(g.hint) ? 'hot' : 'cold' }, g.hint))),
+      st.secret ? h('p', null, `Out of guesses. The number was ${st.secret}.`) : null,
+      waiting ? h('p', { class: 'hint' }, `Next round in ${Math.ceil(st.waitMs / 60000)} min.`)
+        : h('form', { onsubmit: async e => {
+            e.preventDefault(); err.textContent = '';
+            try {
+              const r = await api('POST', '/api/nitro/guess', { n: Number(input.value) });
+              if (r.nitro.hasNitro) { applyMe(r.me); toast('You won Nitro!'); } else draw(r.nitro);
+            } catch (x) { err.textContent = x.message; }
+          } }, field(st.active ? `${left} ${left === 1 ? 'guess' : 'guesses'} left` : 'Your guess', input), err,
+          h('button', { class: 'btn', type: 'submit' }, st.active ? 'Guess' : 'Start a round')));
+  };
+  api('GET', '/api/nitro').then(r => draw(r.nitro)).catch(e => { box.textContent = e.message; });
+  return [h('h2', null, 'Nitro'), box];
+}
+
+function renderMembers() {
+  const all = [...S.users.values()].sort((a, b) => a.displayName.localeCompare(b.displayName));
+  const on = all.filter(u => u.status !== 'offline');
+  const off = all.filter(u => u.status === 'offline');
+  const row = u => h('button', { class: 'mem' + (u.status === 'offline' ? ' off' : ''), onclick: () => openProfile(u.id) },
+    avatar(u, 32, { status: true }), nameEl(u));
+  $('#members').replaceChildren(
+    h('div', { class: 'mh' }, `Online — ${on.length}`), ...on.map(row),
+    h('div', { class: 'mh' }, `Offline — ${off.length}`), ...off.map(row));
+}
+
+function renderUserbar() {
+  const u = S.me;
+  $('#userbar').replaceChildren(
+    h('button', { class: 'me', onclick: () => openProfile(u.id), title: 'View your profile' },
+      avatar(u, 32, { status: true }),
+      h('div', { class: 'me-t' }, nameEl(u), h('small', null, statusLabel(u)))),
+    h('button', { class: 'iconbtn', title: 'User Settings', 'aria-label': 'User Settings', onclick: () => openSettings('account') }, '⚙'));
+}
+
+function renderHeader() {
+  const ch = S.channels.find(c => c.id === S.channelId);
+  if (!ch) {
+    $('#chname').textContent = '';
+    $('#chtopic').textContent = '';
+    $('#msginput').placeholder = 'Select a channel';
+    $('#msginput').disabled = true;
+    document.title = 'Nexus';
+    return;
+  }
+  $('#msginput').disabled = false;
+  $('#chname').textContent = '# ' + (ch.name || 'unnamed-channel') + (ch.badges||[]).map(id=>S.catalog?.badges?.[id] ? ' '+S.catalog.badges[id].symbol : '').join('');
+  $('#chtopic').textContent = ch.topic || '';
+  $('#msginput').placeholder = 'Message #' + (ch.name || 'channel');
+  document.title = '#' + (ch.name || 'channel') + ' | Nexus';
+}
+
+function rowsFor(msg, prev) {
+  const out = [];
+  const d = new Date(msg.ts);
+  const newDay = !prev || new Date(prev.ts).toDateString() !== d.toDateString();
+  if (newDay) {
+    out.push(h('div', { class: 'divider' }, h('span', null,
+      d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }))));
+  }
+  const u = getUser(msg.userId);
+  const text = h('div', { class: 'mtext' }, msg.content);
+  if (!newDay && prev.userId === msg.userId && msg.ts - prev.ts < 5 * 60000) {
+    out.push(h('div', { class: 'msg compact' }, h('span', { class: 'ctime' }, timeStr(msg.ts)), text));
+  } else {
+    out.push(h('div', { class: 'msg' },
+      h('div', { class: 'mav', onclick: () => openProfile(u.id) }, avatar(u, 40)),
+      h('div', { class: 'mbody' },
+        h('div', { class: 'mhead' },
+          h('span', { class: 'mname', onclick: () => openProfile(u.id) }, nameEl(u)),
+          h('time', null, timeStr(msg.ts))),
+        text)));
+  }
+  return out;
+}
+
+function renderMessages(keepScroll = false) {
+  const box = $('#msgs');
+  const top = box.scrollTop;
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  const list = S.messages.get(S.channelId) || [];
+  const ch = S.channels.find(c => c.id === S.channelId);
+  box.replaceChildren();
+  if (!ch) {
+    box.append(h('div', { class: 'welcome' }, h('h2', null, 'Welcome to Nexus'), h('p', null, 'Select or create a channel to get started.')));
+    return;
+  }
+  if (!list.length) {
+    box.append(h('div', { class: 'welcome' }, h('h2', null, `Welcome to #${ch.name || 'channel'}`),
+      h('p', null, 'No messages yet. Write the first one below.')));
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  let prev = null;
+  for (const m of list) { frag.append(...rowsFor(m, prev)); prev = m; }
+  box.append(frag);
+  box.scrollTop = keepScroll && !atBottom ? top : box.scrollHeight;
+}
+
+function renderAll() {
+  renderServer(); renderChannels(); renderMembers(); renderUserbar(); renderHeader(); renderMessages(true);
+}
+
+/* ================================================================
+   Channels + messages
+   ================================================================ */
+async function selectChannel(id) {
+  const chosen = S.channels.find(c => c.id === id);
+  if (!chosen) {
+    S.channelId = null;
+    renderChannels(); renderHeader(); renderMessages();
+    return;
+  }
+  S.channelId = id;
+  S.unread.delete(id);
+  renderChannels();
+  renderHeader();
+  if (!S.loaded.has(id)) {
+    $('#msgs').replaceChildren(h('div', { class: 'welcome' }, 'Loading messages…'));
+    try {
+      const { messages } = await api('GET', `/api/channels/${id}/messages`);
+      S.messages.set(id, messages);
+      S.loaded.add(id);
+    } catch (e) { toast(e.message, 'err'); return; }
+  }
+  if (S.channelId === id) renderMessages();
+}
+
+function markUnread(channelId) { S.unread.add(channelId); renderChannels(); }
+
+function addMessage(msg, mine = false) {
+  if (!S.loaded.has(msg.channelId)) {
+    if (msg.userId !== S.me.id) markUnread(msg.channelId);
+    return;
+  }
+  const list = S.messages.get(msg.channelId);
+  if (list.some(m => m.id === msg.id)) return;
+  list.push(msg);
+  if (list.length > 300) list.shift();
+  if (msg.channelId !== S.channelId) {
+    if (msg.userId !== S.me.id) markUnread(msg.channelId);
+    return;
+  }
+  if (list.length === 1) { renderMessages(); return; }
+  const box = $('#msgs');
+  const stick = mine || box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+  box.append(...rowsFor(msg, list[list.length - 2]));
+  if (stick) box.scrollTop = box.scrollHeight;
+}
+
+$('#composer').addEventListener('submit', async e => {
+  e.preventDefault();
+  const input = $('#msginput');
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  try {
+    const { message } = await api('POST', `/api/channels/${S.channelId}/messages`, { content });
+    addMessage(message, true);
+  } catch (err) {
+    toast(err.message, 'err');
+    input.value = content;
+  }
+});
+$('#toggleMembers').addEventListener('click', () => $('#app').classList.toggle('nomembers'));
+$('#srvhead').addEventListener('click', openBoost);
+
+/* ================================================================
+   Live updates
+   ================================================================ */
+function applyMe(me) {
+  S.me = { ...S.me, ...me };
+  S.users.set(S.me.id, S.me);
+  renderUserbar(); renderMembers(); renderMessages(true);
+  if (S.settings && ['frames', 'badges', 'nitro'].includes(S.settings.tab)) renderSettings();
+}
+
+function onUser(u) {
+  const prev = S.users.get(u.id);
+  const visual = !prev || ['displayName', 'avatarColor', 'frame', 'badges'].some(k => JSON.stringify(prev[k]) !== JSON.stringify(u[k]));
+  if (u.id === S.me.id) { applyMe(u); return; }
+  if (!S.users.has(u.id)) return;
+  S.users.set(u.id, u);
+  renderMembers();
+  if (visual) renderMessages(true);
+}
+
+async function resync() {
+  try {
+    const d = await api('GET', '/api/bootstrap');
+    S.users = new Map(d.users.map(u => [u.id, u]));
+    S.me = { ...S.me, ...d.me };
+    S.server = d.server; S.servers = d.servers || [d.server]; S.channels = d.channels; S.channelsByServer.set(d.server.id, d.channels);
+    S.users.set(S.me.id, S.me);
+    const currentChannel = S.channels.find(c => c.id === S.channelId) || S.channels[0];
+    S.channelId = currentChannel?.id || null;
+    S.loaded = new Set();
+    if (S.channelId) {
+      S.messages.set(S.channelId, (await api('GET', `/api/channels/${encodeURIComponent(S.channelId)}/messages`)).messages);
+      S.loaded.add(S.channelId);
+    }
+    renderAll();
+  } catch { /* try again on next reconnect */ }
+}
+
+function connect() {
+  if (S.es) S.es.close();
+  const es = new EventSource('/api/events');
+  S.es = es;
+  es.onopen = () => { if (S.hadOpen) resync(); S.hadOpen = true; };
+  es.onerror = () => { if (es.readyState === EventSource.CLOSED) location.reload(); };
+  es.addEventListener('chat', ev => { const d = JSON.parse(ev.data); if (d.serverId === S.server.id) addMessage(d.message); });
+  es.addEventListener('user', ev => onUser(JSON.parse(ev.data).user));
+  es.addEventListener('server', ev => { const d = JSON.parse(ev.data); if (d.serverId === S.server.id) { S.server = d.server; renderServer(); } });
+  es.addEventListener('catalog', ev => { S.catalog = JSON.parse(ev.data).catalog; renderMembers(); renderMessages(true); if (S.settings) renderSettings(); });
+  es.addEventListener('channels', ev => {
+    const d = JSON.parse(ev.data); if (d.serverId !== S.server.id) return;
+    S.channels = d.channels; S.channelsByServer.set(S.server.id,d.channels);
+    if (S.channels.some(c => c.id === S.channelId)) { renderChannels(); renderHeader(); } else selectChannel(S.channels[0].id);
+  });
+  es.addEventListener('servers', ev => { const d = JSON.parse(ev.data); if (d.userId === S.me.id) { S.servers = d.servers; renderServersRail(); } });
+}
+
+/* ================================================================
+   Modals: profile popout
+   ================================================================ */
+function openModal(content) {
+  closeModal();
+  const ov = h('div', { class: 'overlay', onmousedown: e => { if (e.target === ov) closeModal(); } }, content);
+  $('#modalRoot').append(ov);
+  S.modal = ov;
+}
+function closeModal() { if (S.modal) { S.modal.remove(); S.modal = null; } }
+
+function openProfile(id) {
+  const card = profileCard(getUser(id));
+  if (id === S.me.id) {
+    $('.pbody', card).append(h('button', { class: 'btn block', style: 'margin-top:14px',
+      onclick: () => { closeModal(); openSettings('profile'); } }, 'Edit Profile'));
+  }
+  openModal(card);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (S.modal) closeModal(); else closeSettings();
+});
+
+/* ================================================================
+   Settings
+   ================================================================ */
+const field = (label, input, hint) =>
+  h('div', { class: 'field' }, h('label', null, label), input, hint ? h('div', { class: 'hint' }, hint) : null);
+
+function openSettings(tab = 'account') {
+  closeModal(); closeSettings();
+  S.settings = { root: h('div', { class: 'settings' }), tab };
+  document.body.append(S.settings.root);
+  renderSettings();
+}
+function closeSettings() { if (S.settings) { S.settings.root.remove(); S.settings = null; } }
+
+function renderSettings() {
+  const { root, tab } = S.settings;
+  const tabs = [['account', 'My Account'], ['profile', 'Profile'], ['frames', 'Profile Frames'], ['badges', 'Badges'], ['nitro', '✦ Nitro']];
+  if (S.me.badges.includes('dev')) tabs.push(['devtools', 'Developer Tools']);
+  if (S.server.ownerId === S.me.id || S.me.badges.includes('dev')) tabs.push(['roles', 'Server Roles']);
+  root.replaceChildren(
+    h('nav', { class: 'snav' }, h('div', { class: 'snav-in' },
+      h('div', { class: 'snav-h' }, 'User Settings'),
+      tabs.map(([id, label]) => h('button', { class: 'snav-i' + (id === tab ? ' on' : ''),
+        onclick: () => { S.settings.tab = id; renderSettings(); } }, label)),
+      h('hr'),
+      h('button', { class: 'snav-i danger', onclick: logout }, 'Log Out'))),
+    h('div', { class: 'scontent' }, h('div', { class: 'scontent-in' }, TABS[tab]())),
+    h('button', { class: 'sclose', title: 'Close (Esc)', 'aria-label': 'Close settings', onclick: closeSettings }, '✕'));
+}
+
+function tabAccount() {
+  const u = S.me;
+  const sel = h('select', {
+    onchange: async e => {
+      try { applyMe((await api('PATCH', '/api/me', { status: e.target.value })).me); toast('Status updated'); }
+      catch (err) { toast(err.message, 'err'); }
+    },
+  }, STATUS_OPTS.map(([v, l]) => h('option', { value: v, selected: u.statusPref === v }, l)));
+
+  const cur = h('input', { type: 'password', autocomplete: 'current-password' });
+  const nw = h('input', { type: 'password', autocomplete: 'new-password' });
+  const cf = h('input', { type: 'password', autocomplete: 'new-password' });
+  const perr = h('div', { class: 'err', role: 'alert' });
+  const form = h('form', {
+    onsubmit: async e => {
+      e.preventDefault();
+      perr.textContent = '';
+      if (nw.value !== cf.value) { perr.textContent = 'New passwords do not match.'; return; }
+      try {
+        await api('POST', '/api/me/password', { current: cur.value, next: nw.value });
+        cur.value = nw.value = cf.value = '';
+        toast('Password changed');
+      } catch (err) { perr.textContent = err.message; }
+    },
+  }, field('Current password', cur), field('New password', nw, 'At least 8 characters.'),
+     field('Confirm new password', cf), perr, h('button', { class: 'btn', type: 'submit' }, 'Change password'));
+
+  return [
+    h('h2', null, 'My Account'),
+    h('div', { class: 'acct' },
+      h('div', { class: 'banner', style: `background:${u.accent}` }),
+      h('div', { class: 'acct-row' }, avatar(u, 80, { status: true }),
+        h('div', null, nameEl(u, 'big'), h('div', { class: 'puser' }, '@' + u.username)),
+        h('button', { class: 'btn', style: 'margin-left:auto', onclick: () => { S.settings.tab = 'profile'; renderSettings(); } }, 'Edit Profile'))),
+    field('Status', sel, 'Invisible shows you as offline to everyone else.'),
+    h('h3', null, 'Password'), form,
+    h('hr'),
+    h('button', { class: 'btn danger', onclick: logout }, 'Log Out'),
+  ];
+}
+
+function tabProfile() {
+  const draft = { displayName: S.me.displayName, bio: S.me.bio || '', accent: S.me.accent, avatarColor: S.me.avatarColor };
+  const preview = h('div');
+  const refresh = () => preview.replaceChildren(h('div', { class: 'ph' }, 'Preview'),
+    profileCard({ ...S.me, ...draft, displayName: draft.displayName.trim() || S.me.username }));
+
+  const dn = h('input', { type: 'text', maxlength: 32, value: draft.displayName, oninput: e => { draft.displayName = e.target.value; refresh(); } });
+  const bio = h('textarea', { maxlength: 190, rows: 5, oninput: e => { draft.bio = e.target.value; refresh(); } }, draft.bio);
+  const accent = h('input', { type: 'color', value: draft.accent, 'aria-label': 'Banner color', oninput: e => { draft.accent = e.target.value; refresh(); } });
+  const avc = h('input', { type: 'color', value: draft.avatarColor, 'aria-label': 'Avatar color', oninput: e => { draft.avatarColor = e.target.value; refresh(); } });
+  const sw = h('div', { class: 'swatches' }, SWATCHES.map(c =>
+    h('button', { type: 'button', class: 'sw', style: `background:${c}`, title: c, 'aria-label': 'Use ' + c,
+      onclick: () => { draft.avatarColor = c; avc.value = c; refresh(); } })));
+
+  const save = h('button', { class: 'btn', onclick: async () => {
+    try {
+      const { me } = await api('PATCH', '/api/me', { displayName: draft.displayName.trim(), bio: draft.bio, accent: draft.accent, avatarColor: draft.avatarColor });
+      applyMe(me);
+      toast('Profile saved');
+    } catch (err) { toast(err.message, 'err'); }
+  } }, 'Save changes');
+
+  const setAvatar = async body => {
+    try { applyMe((await api('POST', '/api/me/avatar', body)).me); refresh(); } catch (e) { toast(e.message, 'err'); }
+  };
+  const file = h('input', { type: 'file', accept: 'image/*', class: 'hidden', onchange: e => { pickImage(e.target.files[0], setAvatar); e.target.value = ''; } });
+  const avp = h('div', { class: 'avpick' },
+    Object.entries(S.catalog.presets).map(([id, emo]) => h('button', { type: 'button', class: 'pv', title: id, 'aria-label': 'Use the ' + id + ' avatar', onclick: () => setAvatar({ preset: id }) }, emo)),
+    h('button', { type: 'button', class: 'btn', onclick: () => file.click() }, 'Upload image'),
+    h('button', { type: 'button', class: 'btn sec', onclick: () => setAvatar({ clear: true }) }, 'Use initial'), file);
+  refresh();
+  return [h('h2', null, 'Profile'),
+    h('div', { class: 'prof' },
+      h('div', null, field('Avatar', avp, 'Pick an avatar or upload your own picture.'), field('Display name', dn), field('About me', bio, 'Up to 190 characters.'),
+        field('Banner color', accent), field('Avatar color', h('div', null, avc, sw)), save),
+      preview)];
+}
+
+async function equipFrame(id) {
+  try { applyMe((await api('PATCH', '/api/me', { frame: id })).me); toast('Frame equipped'); }
+  catch (err) { toast(err.message, 'err'); }
+}
+
+function tabFrames() {
+  const owned = new Set(S.me.badges);
+  const tiles = Object.values(S.catalog.frames).map(f => {
+    const locked = f.requires && !owned.has(f.requires);
+    const on = S.me.frame === f.id;
+    const need = f.requires && S.catalog.badges[f.requires];
+    return h('button', { class: 'ftile' + (on ? ' on' : ''), disabled: locked, onclick: () => equipFrame(f.id) },
+      avatar({ ...S.me, frame: f.id }, 64),
+      h('div', { class: 'fname' }, f.name),
+      h('div', { class: 'fsub' }, on ? 'Equipped' : locked ? `Requires the ${need.symbol} ${need.name} badge` : need ? `${need.symbol} Badge exclusive` : 'Free'));
+  });
+  return [h('h2', null, 'Profile Frames'),
+    h('p', { class: 'sub' }, 'A frame goes around your avatar in chat, the member list and your profile.'),
+    h('div', { class: 'frame-grid' }, tiles)];
+}
+
+function tabBadges() {
+  const owned = new Set(S.me.badges);
+  return [h('h2', null, 'Badges'),
+    h('p', { class: 'sub' }, 'Badges you own appear next to your name everywhere on Nexus.'),
+    h('div', { class: 'bpreview' }, avatar(S.me, 40), nameEl(S.me, 'big')),
+    h('div', { class: 'badge-grid' }, Object.values(S.catalog.badges).map(b => {
+      const has = owned.has(b.id);
+      return h('div', { class: 'bcard' + (has ? ' has' : '') },
+        h('div', { class: 'bsym', style: `color:${b.color}` }, b.symbol),
+        h('div', null, h('div', { class: 'bname' }, b.name), h('div', { class: 'bdesc' }, b.description),
+          h('div', { class: 'bstate' }, has ? 'Earned' : 'Not earned yet')));
+    }))];
+}
+
+function tabDevtools() {
+  if (!S.me.badges.includes('dev')) return [h('h2', null, 'Developer Tools'), h('p', { class: 'hint' }, 'Developer role required.')];
+  const target = h('input', { type: 'text', maxlength: 20, placeholder: 'Username (leave blank for yourself)' });
+  const name = h('input', { type: 'text', maxlength: 32, placeholder: 'Early Supporter', required: true });
+  const symbol = h('input', { type: 'text', maxlength: 4, placeholder: '✦', required: true });
+  const color = h('input', { type: 'color', value: '#f0b232' });
+  const desc = h('input', { type: 'text', maxlength: 100, placeholder: 'What this badge means' });
+  const err = h('div', { class: 'err', role: 'alert' });
+  const form = h('form', { onsubmit: async e => {
+    e.preventDefault(); err.textContent = '';
+    try {
+      const r = await api('POST', '/api/dev/badges', { username: target.value.trim(), name: name.value, symbol: symbol.value, color: color.value, description: desc.value });
+      S.catalog.badges = r.catalog.badges;
+      if (r.user.id === S.me.id) applyMe(r.user);
+      else S.users.set(r.user.id, r.user);
+      toast('Badge created and granted to @' + r.user.username);
+      renderSettings();
+    } catch (x) { err.textContent = x.message; }
+  } }, field('Give badge to username', target, 'Only the Developer role can use this tool. Leave blank to grant it to yourself.'),
+      field('Badge name', name), field('Badge symbol', symbol, 'Use 1–4 characters, such as ⛊ or ✦.'),
+      field('Badge color', color), field('Description', desc), err,
+      h('button', { class: 'btn block', type: 'submit' }, 'Create badge and grant it'));
+  const existingUser=h('input',{type:'text',maxlength:20,placeholder:'Username',required:true});
+  const existingSelect=h('select',{},Object.values(S.catalog.badges).map(b=>h('option',{value:b.id},b.symbol+' '+b.name)));
+  const grantErr=h('div',{class:'err'});
+  const grantForm=h('form',{onsubmit:async e=>{e.preventDefault();grantErr.textContent='';try{const r=await api('POST','/api/dev/badges/grant',{username:existingUser.value,badgeId:existingSelect.value});if(r.user.id===S.me.id)applyMe(r.user);else S.users.set(r.user.id,r.user);toast('Existing badge granted');}catch(x){grantErr.textContent=x.message;}}},field('Give an existing badge to username',existingUser),field('Existing badge',existingSelect),grantErr,h('button',{class:'btn',type:'submit'},'Give existing badge'));
+  const chSelect=h('select',{},S.channels.map(c=>h('option',{value:c.id},'#'+c.name)));
+  const channelBadgeSelect=h('select',{},Object.values(S.catalog.badges).map(b=>h('option',{value:b.id},b.symbol+' '+b.name)));
+  const chErr=h('div',{class:'err'});
+  const channelGrant=h('form',{onsubmit:async e=>{e.preventDefault();chErr.textContent='';try{const r=await api('POST',`/api/dev/channels/${encodeURIComponent(chSelect.value)}/badges`,{badgeId:channelBadgeSelect.value});S.channels=S.channels.map(c=>c.id===r.channel.id?r.channel:c);S.channelsByServer.set(S.server.id,S.channels);renderChannels();renderHeader();toast('Badge added to channel');}catch(x){chErr.textContent=x.message;}}},field('Channel',chSelect),field('Existing badge',channelBadgeSelect),chErr,h('button',{class:'btn',type:'submit'},'Give badge to channel'));
+  const channelCreateName=h('input',{type:'text',maxlength:32,placeholder:'Special channel',required:true});const channelCreateSym=h('input',{type:'text',maxlength:4,placeholder:'✦',required:true});const channelCreateColor=h('input',{type:'color',value:'#f0b232'});const channelCreateDesc=h('input',{type:'text',maxlength:100,placeholder:'Badge description'});const channelCreateErr=h('div',{class:'err'});
+  const channelCreate=h('form',{onsubmit:async e=>{e.preventDefault();channelCreateErr.textContent='';try{const r=await api('POST',`/api/dev/channels/${encodeURIComponent(chSelect.value)}/badges`,{name:channelCreateName.value,symbol:channelCreateSym.value,color:channelCreateColor.value,description:channelCreateDesc.value});S.catalog=r.catalog;S.channels=S.channels.map(c=>c.id===r.channel.id?r.channel:c);S.channelsByServer.set(S.server.id,S.channels);renderChannels();renderHeader();renderSettings();toast('Badge created and given to channel');}catch(x){channelCreateErr.textContent=x.message;}}},field('New badge name',channelCreateName),field('Symbol',channelCreateSym),field('Color',channelCreateColor),field('Description',channelCreateDesc),channelCreateErr,h('button',{class:'btn',type:'submit'},'Create badge and give to channel'));
+  const existing = h('div', { class: 'badge-grid' }, Object.values(S.catalog.badges).map(b =>
+    h('div', { class: 'bcard has' }, h('div', { class: 'bsym', style: `color:${b.color}` }, b.symbol),
+      h('div', null, h('div', { class: 'bname' }, b.name), h('div', { class: 'bdesc' }, b.description || 'Custom badge')))));
+  return [h('h2', null, 'Developer Tools'), h('p', { class: 'sub' }, 'Create custom badges and grant them to any registered user. This panel is only shown to the Developer role.'),
+    h('div', { class: 'acct', style: 'padding:18px' }, form), h('div',{class:'acct',style:'padding:18px;margin-top:16px'},h('h3',null,'Give an existing badge'),grantForm), h('div',{class:'acct',style:'padding:18px;margin-top:16px'},h('h3',null,'Give badges to channels'),channelGrant,h('hr'),h('h3',null,'Create a badge for a channel'),channelCreate), h('h3', null, 'Badge catalog'), existing];
+}
+function tabServerRoles() {
+  const s=S.server;
+  if(s.ownerId!==S.me.id&&!S.me.badges.includes('dev')) return [h('h2',null,'Server Roles'),h('p',{class:'hint'},'Only the server owner or a developer can manage roles.')];
+  const name=h('input',{type:'text',maxlength:24,placeholder:'Helper',required:true});
+  const color=h('input',{type:'color',value:'#3ba55d'}); const err=h('div',{class:'err'});
+  const create=h('form',{onsubmit:async e=>{e.preventDefault();err.textContent='';try{const d=await api('POST',`/api/servers/${s.id}/roles`,{name:name.value,color:color.value});S.server=d.server;S.servers=S.servers.map(x=>x.id===d.server.id?d.server:x);renderSettings();toast('Role created');}catch(x){err.textContent=x.message;}}},field('Role name',name),field('Role color',color),err,h('button',{class:'btn',type:'submit'},'Create role'));
+  const target=h('input',{type:'text',maxlength:20,placeholder:'Username to assign roles'}); const roleBoxes=h('div',{class:'acct',style:'padding:12px;display:grid;gap:8px'},...(s.roles||[]).map(r=>{const cb=h('input',{type:'checkbox',value:r.id});return h('label',{style:'display:flex;gap:8px;align-items:center;text-transform:none;font-size:14px'},cb,h('span',{style:`color:${r.color}`},r.name));})); const aerr=h('div',{class:'err'});
+  const assign=h('form',{onsubmit:async e=>{e.preventDefault();aerr.textContent='';try{await api('PATCH',`/api/servers/${s.id}/members/${encodeURIComponent(target.value.trim())}/roles`,{roles:[...roleBoxes.querySelectorAll('input:checked')].map(x=>x.value)});toast('Roles assigned');}catch(x){aerr.textContent=x.message;}}},field('Member username',target,'Use the exact username of a member of this server.'),field('Roles to assign',roleBoxes),aerr,h('button',{class:'btn',type:'submit'},'Assign roles'));
+  return [h('h2',null,'Server Roles'),h('p',{class:'sub'},'Create roles, assign them to members, and choose which roles may type in each channel.'),h('h3',null,'Available roles'),h('div',{class:'chips'},...(s.roles||[]).map(r=>h('span',{class:'chip',style:`--bc:${r.color}`},r.name))),h('div',{class:'acct',style:'padding:18px'},h('h3',null,'Create a role'),create),h('div',{class:'acct',style:'padding:18px;margin-top:16px'},h('h3',null,'Assign roles to a member'),assign)];
+}
+
+const TABS = { account: tabAccount, profile: tabProfile, frames: tabFrames, badges: tabBadges, nitro: tabNitro, devtools: tabDevtools, roles: tabServerRoles };
+
+async function logout() {
+  try { await api('POST', '/api/logout', {}); } catch { /* ignore */ }
+  location.reload();
+}
+
+/* ================================================================
+   Sign in / register
+   ================================================================ */
+function showAuth() {
+  $('#app').classList.add('hidden');
+  $('#auth').classList.remove('hidden');
+  renderAuth('login');
+}
+
+function renderAuth(mode) {
+  const reg = mode === 'register';
+  const err = h('div', { class: 'err', role: 'alert' });
+  const un = h('input', { type: 'text', autocomplete: 'username', required: true, maxlength: 20, autofocus: true });
+  const dn = h('input', { type: 'text', maxlength: 32, placeholder: 'Optional' });
+  const pw = h('input', { type: 'password', required: true, maxlength: 128, autocomplete: reg ? 'new-password' : 'current-password' });
+  const pw2 = h('input', { type: 'password', required: true, maxlength: 128, autocomplete: 'new-password' });
+  const btn = h('button', { class: 'btn block', type: 'submit' }, reg ? 'Create account' : 'Log in');
+  const form = h('form', {
+    onsubmit: async e => {
+      e.preventDefault();
+      err.textContent = '';
+      if (reg && pw.value !== pw2.value) { err.textContent = 'Passwords do not match.'; return; }
+      btn.disabled = true;
+      try {
+        await api('POST', reg ? '/api/register' : '/api/login', { username: un.value.trim(), password: pw.value, displayName: dn.value });
+        await boot();
+      } catch (ex) { err.textContent = ex.message; }
+      finally { btn.disabled = false; }
+    },
+  },
+    field('Username', un, reg ? '3–20 characters: letters, numbers and underscores.' : null),
+    reg ? field('Display name', dn, 'Shown in chat. You can change it later.') : null,
+    field('Password', pw, reg ? 'At least 8 characters.' : null),
+    reg ? field('Confirm password', pw2) : null,
+    err, btn);
+
+  $('#authbox').replaceChildren(
+    h('h1', null, reg ? 'Create an account' : 'Welcome back'),
+    h('p', { class: 'sub' }, reg ? 'Join the conversation on Nexus.' : 'Log in to pick up where you left off.'),
+    form,
+    h('div', { class: 'switch' }, reg ? 'Already have an account? ' : 'Need an account? ',
+      h('a', { role: 'button', tabindex: '0', onclick: () => renderAuth(reg ? 'login' : 'register'),
+        onkeydown: e => { if (e.key === 'Enter') renderAuth(reg ? 'login' : 'register'); } }, reg ? 'Log in' : 'Register')));
+  un.focus();
+}
+
+
+/* ---------- private DMs ---------- */
+async function openDMs() {
+  try {
+    const {users} = await api('GET','/api/dms/users');
+    const list = h('div', {style:'display:flex;flex-direction:column;gap:6px;margin-top:14px;max-height:60vh;overflow:auto'});
+    if (!users.length) list.append(h('p',{class:'hint'},'No other members yet. Ask a friend to register.'));
+    users.forEach(u => list.append(h('button',{class:'mem',style:'width:100%;background:var(--bg2)',onclick:()=>openDM(u.id)},avatar(u,32),nameEl(u),h('span',{style:'margin-left:auto;color:var(--muted)'},'Message →'))));
+    openModal(h('div',{class:'panel'},h('h2',null,'Private messages'),h('p',{class:'hint'},'Choose a Nexus member to open a private conversation.'),list));
+  } catch(e) { toast(e.message,'err'); }
+}
+async function openDM(userId) {
+  try {
+    const {user,messages} = await api('GET','/api/dms/'+encodeURIComponent(userId));
+    const box = h('div',{style:'max-height:45vh;overflow:auto;margin:14px 0;display:flex;flex-direction:column;gap:10px'});
+    const render = arr => { box.replaceChildren(...arr.map(m=>h('div',{style:'background:var(--bg2);padding:10px 12px;border-radius:14px'},h('div',{style:'font-size:12px;color:var(--muted);margin-bottom:4px'},(m.userId===S.me.id?'You':user.displayName)+' · '+timeStr(m.ts)),h('div',{style:'white-space:pre-wrap;overflow-wrap:anywhere'},m.content)))); if(!arr.length)box.append(h('p',{class:'hint'},'This is the start of your private conversation.'));box.scrollTop=box.scrollHeight;};
+    render(messages);
+    const input=h('input',{type:'text',maxlength:2000,placeholder:'Message @'+user.username,style:'width:100%;background:#383a40;border:0;border-radius:16px;padding:12px'});
+    const err=h('div',{class:'err'});
+    const form=h('form',{onsubmit:async e=>{e.preventDefault();const content=input.value.trim();if(!content)return;try{const {message}=await api('POST','/api/dms/'+encodeURIComponent(userId),{content});messages.push(message);input.value='';err.textContent='';render(messages);}catch(x){err.textContent=x.message;}}},input,err);
+    openModal(h('div',{class:'panel'},h('div',{style:'display:flex;align-items:center;gap:10px'},avatar(user,40),h('div',null,h('h2',null,user.displayName),h('div',{class:'hint'},'@'+user.username))),box,form,h('div',{class:'row'},h('button',{class:'btn sec',onclick:openDMs},'All DMs'))));
+  } catch(e) { toast(e.message,'err'); }
+}
+$('#openDMs').addEventListener('click',openDMs);
+
+
+/* ================================================================
+   Boot
+   ================================================================ */
+function init(d) {
+  S.me = d.me;
+  S.catalog = d.catalog;
+  S.servers = d.servers || [d.server];
+  S.channels = d.channels; S.channelsByServer.set(d.server.id,d.channels);
+  S.server = d.server;
+  S.users = new Map(d.users.map(u => [u.id, u]));
+  S.me.status = S.me.statusPref === 'invisible' ? 'offline' : S.me.statusPref;
+  S.users.set(S.me.id, S.me);
+  S.messages = new Map(); S.loaded = new Set(); S.unread = new Set(); S.hadOpen = false;
+  $('#auth').classList.add('hidden');
+  $('#app').classList.remove('hidden');
+  renderServer(); renderServersRail(); renderMembers(); renderUserbar();
+  $('#addServer').addEventListener('click', openCreateServer);
+  selectChannel(d.channels[0].id);
+  connect();
+}
+
+async function boot() {
+  try {
+    init(await api('GET', '/api/bootstrap'));
+  } catch (e) {
+    if (e.status === 401) showAuth();
+    else document.body.prepend(h('p', { style: 'padding:24px' }, 'Could not reach the server: ' + e.message));
+  }
+}
+boot();
+</script>
+</body>
+</html>

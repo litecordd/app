@@ -1,0 +1,237 @@
+{
+  "users": [
+    {
+      "id": "a111661246ec51f4d3f65347",
+      "username": "rainga",
+      "displayName": "rainga",
+      "password": "4dfc6818cfcc8a54cc2bbfe000ef37b3:27aea0eeb56c643c2d34c8f2224ddb97216ad750e490c6ec3a7b4661b141f4f486102c93f515446c01c1d02a302fa960e68806870a388905f9bd6ddd1b6f7958",
+      "avatarColor": "#5865f2",
+      "accent": "#5865f2",
+      "avatar": "",
+      "frame": "none",
+      "badges": [
+        "dev",
+        "nitro",
+        "booster"
+      ],
+      "bio": "",
+      "status": "online",
+      "statusPref": "online",
+      "createdAt": 1792925172655,
+      "nitroRound": null,
+      "serverIds": [
+        "nexus-community",
+        "86c0aba9542f4dc22743f474"
+      ],
+      "currentServerId": "nexus-community"
+    },
+    {
+      "id": "6d6b564c3d3a8e33d1dfc9af",
+      "username": "rarara",
+      "displayName": "rarara",
+      "password": "8f8c552f9ba752ba641398962511c958:8e01b9d0951aa2f0911dfb0329699ff1b32abd1f4915674afbb78f2c08b10b1461b65e1bf181c9d499dc5fd1a7f811dfc2f7d098fed41cd9bb890c90f4fcc856",
+      "avatarColor": "#5865f2",
+      "accent": "#5865f2",
+      "avatar": "",
+      "frame": "none",
+      "badges": [],
+      "bio": "",
+      "status": "online",
+      "statusPref": "online",
+      "createdAt": 1792927048096,
+      "nitroRound": null,
+      "serverIds": [
+        "nexus-community"
+      ],
+      "currentServerId": "nexus-community"
+    }
+  ],
+  "servers": [
+    {
+      "id": "nexus-community",
+      "name": "Nexus Community",
+      "ownerId": "system",
+      "memberIds": [
+        "a111661246ec51f4d3f65347",
+        "6d6b564c3d3a8e33d1dfc9af"
+      ],
+      "roles": [
+        {
+          "id": "member",
+          "name": "Member",
+          "color": "#b5bac1"
+        },
+        {
+          "id": "moderator",
+          "name": "Moderator",
+          "color": "#3ba55d"
+        },
+        {
+          "id": "admin",
+          "name": "Admin",
+          "color": "#f0b232"
+        }
+      ],
+      "memberRoles": {},
+      "channels": [
+        {
+          "id": "general",
+          "name": "general",
+          "topic": "Welcome to Nexus Community",
+          "createdBy": "system",
+          "badges": [
+            "custom_official_c9054"
+          ],
+          "writeRoles": []
+        },
+        {
+          "id": "c8b4403f154c7b2f9b134a85",
+          "name": "general-2",
+          "topic": "",
+          "createdBy": "a111661246ec51f4d3f65347",
+          "badges": [],
+          "writeRoles": []
+        },
+        {
+          "id": "4133a9a6d174c4f8af7c1b88",
+          "name": "nitro-only",
+          "topic": "",
+          "createdBy": "a111661246ec51f4d3f65347",
+          "badges": [
+            "nitro"
+          ],
+          "writeRoles": []
+        }
+      ],
+      "messages": {
+        "general": [],
+        "c8b4403f154c7b2f9b134a85": [],
+        "4133a9a6d174c4f8af7c1b88": []
+      },
+      "boosters": [
+        {
+          "userId": "a111661246ec51f4d3f65347"
+        }
+      ],
+      "boosts": 1,
+      "level": 0,
+      "levels": {
+        "1": 2,
+        "2": 7,
+        "3": 15
+      },
+      "caps": {
+        "1": 8,
+        "2": 15,
+        "3": 30
+      },
+      "channelCap": 5
+    },
+    {
+      "id": "86c0aba9542f4dc22743f474",
+      "name": "ss",
+      "ownerId": "a111661246ec51f4d3f65347",
+      "memberIds": [
+        "a111661246ec51f4d3f65347"
+      ],
+      "roles": [
+        {
+          "id": "member",
+          "name": "Member",
+          "color": "#b5bac1"
+        },
+        {
+          "id": "moderator",
+          "name": "Moderator",
+          "color": "#3ba55d"
+        },
+        {
+          "id": "admin",
+          "name": "Admin",
+          "color": "#f0b232"
+        }
+      ],
+      "memberRoles": {
+        "a111661246ec51f4d3f65347": [
+          "admin"
+        ]
+      },
+      "channels": [
+        {
+          "id": "1ac2ca64c44ff719f21e8e15",
+          "name": "general",
+          "topic": "Welcome to ss",
+          "createdBy": "a111661246ec51f4d3f65347",
+          "badges": [],
+          "writeRoles": []
+        }
+      ],
+      "messages": {
+        "1ac2ca64c44ff719f21e8e15": []
+      },
+      "boosters": [],
+      "boosts": 0,
+      "level": 0,
+      "levels": {
+        "1": 2,
+        "2": 7,
+        "3": 15
+      },
+      "caps": {
+        "1": 8,
+        "2": 15,
+        "3": 30
+      },
+      "channelCap": 5
+    }
+  ],
+  "dms": [],
+  "nitroRounds": {
+    "a111661246ec51f4d3f65347": {
+      "active": false,
+      "secret": 5134,
+      "guesses": [],
+      "total": 5,
+      "waitMs": 0
+    },
+    "6d6b564c3d3a8e33d1dfc9af": {
+      "active": false,
+      "secret": 471,
+      "guesses": [],
+      "total": 5,
+      "waitMs": 0
+    }
+  },
+  "catalog": {
+    "badges": {
+      "dev": {
+        "id": "dev",
+        "name": "Developer",
+        "symbol": "⛊",
+        "color": "#f0b232",
+        "description": "Nexus developer"
+      },
+      "nitro": {
+        "id": "nitro",
+        "name": "Nitro",
+        "symbol": "✦",
+        "color": "#ff73fa",
+        "description": "Won Nexus Nitro"
+      },
+      "booster": {
+        "id": "booster",
+        "name": "Server Booster",
+        "symbol": "❖",
+        "color": "#b45cff",
+        "description": "Boosted a server"
+      },
+      "custom_official_c9054": {
+        "id": "custom_official_c9054",
+        "name": "Official",
+        "symbol": "✦",
+        "color": "#3340f0",
+        "description": ""
+      }
+    }
+  }
+}
