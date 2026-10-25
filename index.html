@@ -64,17 +64,17 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .f-gold{--glow:rgba(240,178,50,.7)}
 .f-gold .ring{background:conic-gradient(#fff1a8,#f0b232,#b8791a,#f0b232,#fff1a8)}
 .f-neon{--glow:#7a5cff}
-.f-neon .ring{background:conic-gradient(#00f0ff,#7a5cff,#ff3df2,#00f0ff);animation:spin 3s linear infinite}
+.f-neon .ring{background:conic-gradient(#00f0ff,#7a5cff,#ff3df2,#00f0ff)}
 .f-rainbow{--glow:rgba(255,255,255,.5)}
-.f-rainbow .ring{background:conic-gradient(#ff3b3b,#ff9f1a,#ffe14d,#4cd964,#2ec5ff,#5b5bff,#d94dff,#ff3b3b);animation:spin 6s linear infinite}
-.f-fire{--glow:#ff6a00;animation:pulse 1.4s ease-in-out infinite}
-.f-fire .ring{background:conic-gradient(#ff2d00,#ff9d00,#ffd000,#ff9d00,#ff2d00);animation:spin 2.5s linear infinite}
+.f-rainbow .ring{background:conic-gradient(#ff3b3b,#ff9f1a,#ffe14d,#4cd964,#2ec5ff,#5b5bff,#d94dff,#ff3b3b)}
+.f-fire{--glow:#ff6a00}
+.f-fire .ring{background:conic-gradient(#ff2d00,#ff9d00,#ffd000,#ff9d00,#ff2d00)}
 .f-ice{--glow:#7fd8ff}
 .f-ice .ring{background:conic-gradient(#e8fbff,#7fd8ff,#3a8dff,#7fd8ff,#e8fbff)}
 .f-pixel{--glow:#43b581}
 .f-pixel .ring{background:repeating-conic-gradient(#43b581 0 15deg,#1e1f22 15deg 30deg)}
-.f-dev{--glow:#4b247a;animation:pulse 2.4s ease-in-out infinite}
-.f-dev .ring{background:conic-gradient(#4b247a,#8c5bd6,#4b247a,#8c5bd6,#4b247a);animation:spin 5s linear infinite}
+.f-dev{--glow:#4b247a}
+.f-dev .ring{background:conic-gradient(#4b247a,#8c5bd6,#4b247a,#8c5bd6,#4b247a)}
 @media (prefers-reduced-motion:reduce){.rw,.rw .ring{animation:none!important}}
 
 /* ---------- names + badges ---------- */
@@ -240,7 +240,7 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .guess{display:flex;justify-content:space-between;background:var(--bg2);border-radius:var(--r1);padding:8px 14px;margin-bottom:6px}
 .hot{color:#ff9d42;font-weight:600}.cold{color:#7fd8ff;font-weight:600}
 .f-aurora{--glow:#7fffd4}
-.f-aurora .ring{background:conic-gradient(#7fffd4,#7b8cff,#ff73fa,#7fffd4);animation:spin 4s linear infinite}
+.f-aurora .ring{background:conic-gradient(#7fffd4,#7b8cff,#ff73fa,#7fffd4)}
 @media (max-width:860px){
   .app,.app.nomembers{grid-template-columns:190px minmax(0,1fr)}
   .rail,.members{display:none}
@@ -393,7 +393,7 @@ function avatar(u, size = 40, { status = false } = {}) {
   if (u.frame && u.frame !== 'none') {
     el.append(h('div', { class: 'rw f-' + u.frame }, h('div', { class: 'ring' })));
   }
-  const a = u.avatar || '', emo = a.startsWith('preset:') && S.catalog.presets[a.slice(7)];
+  const a = u.avatar || '', emo = a.startsWith('preset:') && S.catalog?.presets?.[a.slice(7)];
   el.append((a.startsWith('data:image/') || a.startsWith('/api/avatar/')) ? h('div', { class: 'face img', style: `background-image:url("${a}")` })
     : emo ? h('div', { class: 'face' }, h('span', { class: 'emo' }, emo))
     : h('div', { class: 'face' }, [...String(u.displayName || u.username || '?').trim()][0] || '?'));
@@ -403,17 +403,17 @@ function avatar(u, size = 40, { status = false } = {}) {
 
 // Display name followed by its badges, e.g.  Alex ⛊
 function nameEl(u, cls = '') {
-  const owned = (u.badges || []).filter(id => S.catalog.badges[id]);
+  const owned = (u.badges || []).filter(id => S.catalog?.badges?.[id]);
   const selected = Array.isArray(u.shownBadges) ? u.shownBadges.filter(id => owned.includes(id)) : owned;
   const max = owned.includes('dev') ? 3 : owned.includes('nitro') ? 2 : 1;
-  const badges = selected.slice(0, max).map(id => S.catalog.badges[id]).filter(Boolean).map(b =>
+  const badges = selected.slice(0, max).map(id => S.catalog?.badges?.[id]).filter(Boolean).map(b =>
     h('span', { class: 'badge', title: b.name, 'aria-label': b.name + ' badge', style: `color:${b.color}` }, b.symbol));
   return h('span', { class: 'namewrap ' + cls }, h('span', { class: 'nm' }, u.displayName), badges);
 }
 
 function profileCard(u) {
   const joined = new Date(u.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-  const badges = (u.badges || []).map(id => S.catalog.badges[id]).filter(Boolean);
+  const badges = (u.badges || []).map(id => S.catalog?.badges?.[id]).filter(Boolean);
   return h('div', { class: 'pcard' },
     h('div', { class: 'banner', style: u.banner ? `background-color:${u.accent};background-image:url("${u.banner}");background-size:cover;background-position:center` : `background:${u.accent}` }),
     h('div', { class: 'pav' }, avatar(u, 88, { status: true })),
@@ -432,7 +432,7 @@ function profileCard(u) {
    ================================================================ */
 function statusLabel(u) { return (STATUS_OPTS.find(o => o[0] === u.statusPref) || [, 'Online'])[1]; }
 
-const canDelete = c => c.id !== 'general' && (c.createdBy === S.me.id || S.me.badges.includes('dev'));
+const canDelete = c => !!S.me && c.id !== 'general' && (c.createdBy === S.me.id || (S.me.badges || []).includes('dev'));
 function renderChannels() {
   $('#channels').replaceChildren(
     h('div', { class: 'chrow' }, h('div', { class: 'chtitle' }, 'Text Channels'),
@@ -440,7 +440,7 @@ function renderChannels() {
     ...S.channels.map(c => h('button', {
       class: 'ch' + (c.id === S.channelId ? ' on' : '') + (S.unread.has(c.id) ? ' unread' : ''),
       onclick: () => selectChannel(c.id),
-    }, h('span', { class: 'hash' }, '#'), c.name, ...(c.badges||[]).map(bid => S.catalog.badges[bid] ? h('span',{class:'badge',title:S.catalog.badges[bid].name,style:`color:${S.catalog.badges[bid].color}`},S.catalog.badges[bid].symbol) : null), S.unread.has(c.id) ? h('span', { class: 'pip' }) : null,
+    }, h('span', { class: 'hash' }, '#'), c.name, ...(c.badges||[]).map(bid => S.catalog?.badges?.[bid] ? h('span',{class:'badge',title:S.catalog.badges[bid].name,style:`color:${S.catalog.badges[bid].color}`},S.catalog.badges[bid].symbol) : null), S.unread.has(c.id) ? h('span', { class: 'pip' }) : null,
       canDelete(c) ? h('span', { class: 'x', title: 'Delete channel', onclick: e => { e.stopPropagation(); delChannel(c); } }, '✕') : null)));
 }
 
@@ -685,7 +685,7 @@ function renderMessages(keepScroll = false) {
   const box = $('#msgs');
   const top = box.scrollTop;
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
-  const list = S.messages.get(S.channelId) || [];
+  const list = (S.messages.get(S.channelId) || []).slice(-150);
   const ch = S.channels.find(c => c.id === S.channelId);
   box.replaceChildren();
   if (!ch) {
@@ -719,14 +719,16 @@ async function selectChannel(id) {
     return;
   }
   S.channelId = id;
+  const requestedServerId = S.server?.id;
   S.unread.delete(id);
   renderChannels();
   renderHeader();
   if (!S.loaded.has(id)) {
     $('#msgs').replaceChildren(h('div', { class: 'welcome' }, 'Loading messages…'));
     try {
-      const { messages } = await api('GET', `/api/channels/${id}/messages`);
-      S.messages.set(id, messages);
+      const { messages } = await api('GET', `/api/channels/${encodeURIComponent(id)}/messages`);
+      if (S.server?.id !== requestedServerId || S.channelId !== id) return;
+      S.messages.set(id, Array.isArray(messages) ? messages.slice(-150) : []);
       S.loaded.add(id);
     } catch (e) { toast(e.message, 'err'); return; }
   }
@@ -743,7 +745,7 @@ function addMessage(msg, mine = false) {
   const list = S.messages.get(msg.channelId);
   if (list.some(m => m.id === msg.id)) return;
   list.push(msg);
-  if (list.length > 300) list.shift();
+  if (list.length > 150) list.shift();
   if (msg.channelId !== S.channelId) {
     if (msg.userId !== S.me.id) markUnread(msg.channelId);
     return;
@@ -805,11 +807,12 @@ async function resync() {
     S.channelId = currentChannel?.id || null;
     S.loaded = new Set();
     if (S.channelId) {
-      S.messages.set(S.channelId, (await api('GET', `/api/channels/${encodeURIComponent(S.channelId)}/messages`)).messages);
+      S.messages.set(S.channelId, ((await api('GET', `/api/channels/${encodeURIComponent(S.channelId)}/messages`)).messages || []).slice(-150));
       S.loaded.add(S.channelId);
     }
     renderAll();
-  } catch { /* try again on next reconnect */ }
+    if (!S.channelId) { renderHeader(); renderMessages(); }
+  } catch (err) { console.warn('Live resync failed; waiting for reconnect', err); }
 }
 
 function connect() {
@@ -817,17 +820,18 @@ function connect() {
   const es = new EventSource('/api/events');
   S.es = es;
   es.onopen = () => { if (S.hadOpen) resync(); S.hadOpen = true; };
-  es.onerror = () => { if (es.readyState === EventSource.CLOSED) location.reload(); };
-  es.addEventListener('chat', ev => { const d = JSON.parse(ev.data); if (d.serverId === S.server.id) addMessage(d.message); });
-  es.addEventListener('user', ev => onUser(JSON.parse(ev.data).user));
-  es.addEventListener('server', ev => { const d = JSON.parse(ev.data); if (d.serverId === S.server.id) { S.server = d.server; renderServer(); } });
-  es.addEventListener('catalog', ev => { S.catalog = JSON.parse(ev.data).catalog; renderMembers(); renderMessages(true); if (S.settings) renderSettings(); });
+  es.onerror = () => { /* EventSource retries transient disconnects automatically. */ };
+  const readEvent = ev => { try { return JSON.parse(ev.data); } catch (err) { console.warn('Ignoring invalid live update', err); return null; } };
+  es.addEventListener('chat', ev => { const d = readEvent(ev); if (d && d.serverId === S.server?.id && d.message) addMessage(d.message); });
+  es.addEventListener('user', ev => { const d = readEvent(ev); if (d?.user?.id) onUser(d.user); });
+  es.addEventListener('server', ev => { const d = readEvent(ev); if (d && d.serverId === S.server?.id && d.server) { S.server = d.server; renderServer(); } });
+  es.addEventListener('catalog', ev => { const d = readEvent(ev); if (!d?.catalog) return; S.catalog = d.catalog; renderMembers(); renderMessages(true); if (S.settings) renderSettings(); });
   es.addEventListener('channels', ev => {
-    const d = JSON.parse(ev.data); if (d.serverId !== S.server.id) return;
+    const d = readEvent(ev); if (!d || d.serverId !== S.server?.id || !Array.isArray(d.channels)) return;
     S.channels = d.channels; S.channelsByServer.set(S.server.id,d.channels);
-    if (S.channels.some(c => c.id === S.channelId)) { renderChannels(); renderHeader(); } else selectChannel(S.channels[0].id);
+    if (S.channels.some(c => c.id === S.channelId)) { renderChannels(); renderHeader(); } else selectChannel(S.channels[0]?.id || null);
   });
-  es.addEventListener('servers', ev => { const d = JSON.parse(ev.data); if (d.userId === S.me.id) { S.servers = d.servers; renderServersRail(); } });
+  es.addEventListener('servers', ev => { const d = readEvent(ev); if (d && d.userId === S.me?.id && Array.isArray(d.servers)) { S.servers = d.servers; renderServersRail(); } });
 }
 
 /* ================================================================
@@ -872,8 +876,8 @@ function closeSettings() { if (S.settings) { S.settings.root.remove(); S.setting
 function renderSettings() {
   const { root, tab } = S.settings;
   const tabs = [['account', 'My Account'], ['profile', 'Profile'], ['frames', 'Profile Frames'], ['badges', 'Badges'], ['nitro', '✦ Nitro']];
-  if (S.me.badges.includes('dev')) tabs.push(['devtools', 'Developer Tools']);
-  if (S.server.ownerId === S.me.id || S.me.badges.includes('dev')) tabs.push(['roles', 'Server Roles']);
+  if ((S.me.badges || []).includes('dev')) tabs.push(['devtools', 'Developer Tools']);
+  if (S.server?.ownerId === S.me.id || (S.me.badges || []).includes('dev')) tabs.push(['roles', 'Server Roles']);
   root.replaceChildren(
     h('nav', { class: 'snav' }, h('div', { class: 'snav-in' },
       h('div', { class: 'snav-h' }, 'User Settings'),
@@ -1007,7 +1011,7 @@ function tabBadges() {
 }
 
 function tabDevtools() {
-  if (!S.me.badges.includes('dev')) return [h('h2', null, 'Developer Tools'), h('p', { class: 'hint' }, 'Developer role required.')];
+  if (!(S.me.badges || []).includes('dev')) return [h('h2', null, 'Developer Tools'), h('p', { class: 'hint' }, 'Developer role required.')];
   const joinServerSelect=h('select',{},h('option',{value:''},'Loading servers…'));
   const joinServerErr=h('div',{class:'err'});
   api('GET','/api/dev/servers').then(d=>joinServerSelect.replaceChildren(...d.servers.map(s=>h('option',{value:s.id,disabled:s.joined||s.banned},s.name+(s.joined?' (joined)':s.banned?' (banned)':''))))).catch(e=>{joinServerErr.textContent=e.message;});
@@ -1061,7 +1065,7 @@ function tabDevtools() {
 }
 function tabServerRoles() {
   const s=S.server;
-  if(s.ownerId!==S.me.id&&!S.me.badges.includes('dev')) return [h('h2',null,'Server Roles'),h('p',{class:'hint'},'Only the server owner or a developer can manage roles.')];
+  if(s.ownerId!==S.me.id&&!(S.me.badges || []).includes('dev')) return [h('h2',null,'Server Roles'),h('p',{class:'hint'},'Only the server owner or a developer can manage roles.')];
   const name=h('input',{type:'text',maxlength:24,placeholder:'Helper',required:true});
   const color=h('input',{type:'color',value:'#3ba55d'}); const err=h('div',{class:'err'});
   const create=h('form',{onsubmit:async e=>{e.preventDefault();err.textContent='';try{const d=await api('POST',`/api/servers/${s.id}/roles`,{name:name.value,color:color.value});S.server=d.server;S.servers=S.servers.map(x=>x.id===d.server.id?d.server:x);renderSettings();toast('Role created');}catch(x){err.textContent=x.message;}}},field('Role name',name),field('Role color',color),err,h('button',{class:'btn',type:'submit'},'Create role'));
@@ -1166,7 +1170,7 @@ function init(d) {
   $('#app').classList.remove('hidden');
   renderServer(); renderServersRail(); renderMembers(); renderUserbar();
   $('#addServer').addEventListener('click', openCreateServer);
-  selectChannel(d.channels[0].id);
+  if (Array.isArray(d.channels) && d.channels[0]?.id) selectChannel(d.channels[0].id); else { S.channelId = null; renderHeader(); renderMessages(); }
   connect();
 }
 
