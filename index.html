@@ -130,7 +130,7 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .mhead time{font-size:12px;color:var(--muted);flex:none}
 .mtext{white-space:pre-wrap;overflow-wrap:anywhere}
 .composer{padding:0 16px 24px;flex:none}
-.composer input{width:100%;background:#383a40;border:0;border-radius:var(--r2);padding:11px 16px;outline:none}
+.composer{display:flex;gap:8px;align-items:center}.composer input{flex:1;min-width:0;width:100%;background:#383a40;border:0;border-radius:var(--r2);padding:11px 16px;outline:none}.composer .send-btn{flex:none;border:0;border-radius:12px;background:var(--blurple);color:#fff;font-weight:700;padding:10px 14px}.composer .send-btn:hover{background:var(--blurple-h)}
 
 .members{--dotbg:var(--bg2);background:var(--bg2);overflow:auto;padding:8px}
 .mh{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);padding:16px 8px 4px}
@@ -258,12 +258,12 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .mobile-nav-toggle{display:none;flex:none}
 @media(max-width:760px){
   .app,.app.nomembers{grid-template-columns:56px minmax(0,1fr)}
-  .rail{grid-column:1;grid-row:1;z-index:8;padding:8px 4px;gap:8px}
+  .rail{grid-column:1;grid-row:1;position:relative;z-index:21;padding:8px 4px;gap:8px}
   .rail .srv{width:42px;height:42px;flex:none;border-radius:14px}
   .rail .iconbtn{width:42px!important;height:42px!important;margin-top:4px!important}
   .side{position:fixed;z-index:20;left:56px;top:0;bottom:0;width:min(280px,calc(100vw - 56px));box-shadow:12px 0 32px #0008;transform:translateX(-120%);transition:transform .18s ease}
   .mobile-nav-open .side{transform:translateX(0)}
-  .mobile-nav-open::before{content:'';position:fixed;inset:0;z-index:19;background:#0008}
+  .mobile-nav-open::before{content:'';position:fixed;inset:0;z-index:19;background:#0008;pointer-events:auto}
   .side{max-width:calc(100vw - 56px)}
   .main{grid-column:2;grid-row:1;min-width:0}
   .members{display:none!important}
@@ -318,6 +318,7 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
     <div class="msgs" id="msgs"></div>
     <form class="composer" id="composer">
       <input id="msginput" type="text" maxlength="2000" autocomplete="off" placeholder="Message">
+      <button class="send-btn" id="sendMessage" type="submit" aria-label="Send message">Send</button>
     </form>
   </main>
   <aside class="members" id="members"></aside>
@@ -463,11 +464,12 @@ async function switchServer(id) {
     // Keep every server in the rail; older server responses may omit the list.
     S.servers = Array.isArray(d.servers) && d.servers.length ? d.servers.filter(Boolean) : await api('GET', '/api/servers').then(x => Array.isArray(x?.servers) ? x.servers.filter(Boolean) : [S.server]);
     S.channels = Array.isArray(d.channels) ? d.channels.filter(Boolean) : (Array.isArray(S.server.channels) ? S.server.channels.filter(Boolean) : []);
-    S.channelsByServer.set(d.server.id, S.channels);
-    S.me = { ...S.me, ...d.me };
-    S.users.set(S.me.id, S.me); S.loaded = new Set(); S.messages = new Map(); S.unread = new Set();
+    S.channelsByServer.set(S.server.id, S.channels);
+    if (d.me && typeof d.me === 'object') S.me = { ...S.me, ...d.me };
+    if (S.me?.id) S.users.set(S.me.id, S.me); S.loaded = new Set(); S.messages = new Map(); S.unread = new Set();
     S.channelId = S.channels[0]?.id || null;
     renderServersRail(); renderAll();
+    $('#app')?.classList.remove('mobile-nav-open');
     if (S.channelId) await selectChannel(S.channelId);
   } catch (e) { toast(e.message, 'err'); }
 }
@@ -776,6 +778,7 @@ $('#composer').addEventListener('submit', async e => {
 });
 $('#toggleMembers').addEventListener('click', () => $('#app').classList.toggle('nomembers'));
 $('#mobileNavToggle')?.addEventListener('click', () => $('#app').classList.toggle('mobile-nav-open'));
+$('#app')?.addEventListener('click', e => { if (e.target === $('#app') && $('#app').classList.contains('mobile-nav-open')) $('#app').classList.remove('mobile-nav-open'); });
 $('#channels')?.addEventListener('click', e => { if (e.target.closest('.ch')) $('#app').classList.remove('mobile-nav-open'); });
 $('#srvhead').addEventListener('click', openBoost);
 
@@ -999,8 +1002,8 @@ function tabBadges() {
   const owned = new Set(S.me.badges);
   const ownedIds = Object.keys(S.catalog.badges).filter(id => owned.has(id));
   const maxShown = owned.has('dev') ? 3 : owned.has('nitro') ? 2 : 1;
-  const selectedShown = new Set(Array.isArray(S.me.shownBadges) ? S.me.shownBadges : ownedIds);
-  const shownControls = h('div', { class: 'acct', style: 'padding:14px;margin-bottom:14px' }, h('h3', null, `Show next to name (up to ${maxShown})`), ...ownedIds.map(id => { const b=S.catalog.badges[id]; return h('label',{style:'display:flex;align-items:center;gap:8px;padding:6px 0'},h('input',{type:'checkbox',checked:selectedShown.has(id),onchange:async e=>{const next=new Set(selectedShown);if(e.target.checked){if(next.size>=maxShown){e.target.checked=false;toast(`Your role allows ${maxShown} shown badge(s).`);return;}next.add(id);}else next.delete(id);try{const {me}=await api('PATCH','/api/me',{shownBadges:[...next]});applyMe(me);selectedShown.clear();(Array.isArray(me.shownBadges) ? me.shownBadges : []).forEach(x=>selectedShown.add(x));renderSettings();}catch(x){toast(x.message,'err');}}}),h('span',{style:`color:${b.color}`},b.symbol),b.name); }));
+  const selectedShown = new Set((Array.isArray(S.me.shownBadges) ? S.me.shownBadges : ownedIds).filter(id => ownedIds.includes(id)).slice(0, maxShown));
+  const shownControls = h('div', { class: 'acct', style: 'padding:14px;margin-bottom:14px' }, h('h3', null, `Show next to name (up to ${maxShown})`), ...ownedIds.map(id => { const b=S.catalog.badges[id]; return h('label',{style:'display:flex;align-items:center;gap:8px;padding:6px 0'},h('input',{type:'checkbox',checked:selectedShown.has(id),onchange:async e=>{const checkbox=e.target;const before=new Set(Array.isArray(S.me.shownBadges)?S.me.shownBadges:ownedIds);const next=new Set(before);if(checkbox.checked){if(next.size>=maxShown){checkbox.checked=false;toast(`Your role allows ${maxShown} shown badge(s).`);return;}next.add(id);}else next.delete(id);const nextArray=[...next];S.me={...S.me,shownBadges:nextArray};S.users.set(S.me.id,S.me);renderUserbar();renderMembers();renderMessages(true);try{const response=await api('PATCH','/api/me',{shownBadges:nextArray});if(response?.me && typeof response.me==='object'){const returned=Array.isArray(response.me.shownBadges)?response.me.shownBadges:nextArray;applyMe({...response.me,shownBadges:returned});}else applyMe({shownBadges:nextArray});renderSettings();}catch(x){S.me={...S.me,shownBadges:[...before]};S.users.set(S.me.id,S.me);toast(x.message,'err');renderSettings();}}}),h('span',{style:`color:${b.color}`},b.symbol),b.name); }));
   return [h('h2', null, 'Badges'),
     h('p', { class: 'sub' }, 'Choose which badges appear next to your name. Your account tier sets the maximum.'),
     shownControls, h('div', { class: 'bpreview' }, avatar(S.me, 40), nameEl(S.me, 'big')),
@@ -1134,7 +1137,8 @@ function renderAuth(mode) {
 /* ---------- private DMs ---------- */
 async function openDMs() {
   try {
-    const {users} = await api('GET','/api/dms/users');
+    const response = await api('GET','/api/dms/users');
+    const users = Array.isArray(response?.users) ? response.users : [];
     const list = h('div', {style:'display:flex;flex-direction:column;gap:6px;margin-top:14px;max-height:60vh;overflow:auto'});
     if (!users.length) list.append(h('p',{class:'hint'},'No other members yet. Ask a friend to register.'));
     users.forEach(u => list.append(h('button',{class:'mem',style:'width:100%;background:var(--bg2)',onclick:()=>openDM(u.id)},avatar(u,32),nameEl(u),h('span',{style:'margin-left:auto;color:var(--muted)'},'Message →'))));
@@ -1149,7 +1153,7 @@ async function openDM(userId) {
     render(messages);
     const input=h('input',{type:'text',maxlength:2000,placeholder:'Message @'+user.username,style:'width:100%;background:#383a40;border:0;border-radius:16px;padding:12px'});
     const err=h('div',{class:'err'});
-    const form=h('form',{onsubmit:async e=>{e.preventDefault();const content=input.value.trim();if(!content)return;try{const {message}=await api('POST','/api/dms/'+encodeURIComponent(userId),{content});messages.push(message);input.value='';err.textContent='';render(messages);}catch(x){err.textContent=x.message;}}},input,err);
+    const form=h('form',{style:'display:flex;flex-direction:column;gap:8px',onsubmit:async e=>{e.preventDefault();const content=input.value.trim();if(!content)return;try{const response=await api('POST','/api/dms/'+encodeURIComponent(userId),{content});if(response?.message)messages.push(response.message);input.value='';err.textContent='';render(messages);}catch(x){err.textContent=x.message;}}},input,h('button',{class:'btn',type:'submit',style:'align-self:flex-end;min-width:90px'},'Send'),err);
     openModal(h('div',{class:'panel'},h('div',{style:'display:flex;align-items:center;gap:10px'},avatar(user,40),h('div',null,h('h2',null,user.displayName),h('div',{class:'hint'},'@'+user.username))),box,form,h('div',{class:'row'},h('button',{class:'btn sec',onclick:openDMs},'All DMs'))));
   } catch(e) { toast(e.message,'err'); }
 }
