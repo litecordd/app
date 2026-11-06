@@ -395,6 +395,31 @@ const S = {
 };
 const getUser = id => S.users.get(id) || { ...GHOST, id };
 
+const BUILTIN_BADGES = {
+  staff:{id:'staff',name:'LiteCord Staff',symbol:'🛡️',color:'#5865f2',description:'Member of the LiteCord staff team.'},
+  partner:{id:'partner',name:'Partner',symbol:'🤝',color:'#3ba55c',description:'Recognized LiteCord community partner.'},
+  hypesquad:{id:'hypesquad',name:'Hype Squad',symbol:'🎉',color:'#f47fff',description:'Member of the LiteCord Hype Squad.'},
+  bravery:{id:'bravery',name:'Hype Squad Bravery',symbol:'🟠',color:'#f47b35',description:'Bravery house badge.'},
+  brilliance:{id:'brilliance',name:'Hype Squad Brilliance',symbol:'💠',color:'#f1c40f',description:'Brilliance house badge.'},
+  balance:{id:'balance',name:'Hype Squad Balance',symbol:'🟣',color:'#9b59b6',description:'Balance house badge.'},
+  bug_hunter:{id:'bug_hunter',name:'Bug Hunter',symbol:'🐛',color:'#3ba55c',description:'Helped identify and report bugs.'},
+  golden_bug_hunter:{id:'golden_bug_hunter',name:'Golden Bug Hunter',symbol:'🏅',color:'#f1c40f',description:'Recognized for exceptional bug reports.'},
+  early_supporter:{id:'early_supporter',name:'Early Supporter',symbol:'💎',color:'#b9a3e3',description:'Supported LiteCord during its early days.'},
+  verified_bot_dev:{id:'verified_bot_dev',name:'Verified Bot Developer',symbol:'⚙️',color:'#5865f2',description:'Verified developer of a LiteCord bot.'},
+  active_developer:{id:'active_developer',name:'Active Developer',symbol:'⌘',color:'#3ba55c',description:'Actively builds for LiteCord.'},
+  certified_moderator:{id:'certified_moderator',name:'Certified Moderator',symbol:'🔰',color:'#57a6ff',description:'Completed LiteCord moderator certification.'},
+  nitro:{id:'nitro',name:'LiteCord Nitro',symbol:'✨',color:'#ff73fa',description:'LiteCord Nitro subscriber.'},
+  nitro_basic:{id:'nitro_basic',name:'LiteCord Nitro Basic',symbol:'✦',color:'#e879f9',description:'LiteCord Nitro Basic subscriber.'},
+  server_booster:{id:'server_booster',name:'Server Booster',symbol:'🚀',color:'#ff73fa',description:'Boosted a LiteCord server.'},
+  event_champion:{id:'event_champion',name:'Event Champion',symbol:'🏆',color:'#f1c40f',description:'Recognized for an event achievement.'},
+  contributor:{id:'contributor',name:'Contributor',symbol:'🧩',color:'#57a6ff',description:'Contributed to LiteCord.'},
+  verified:{id:'verified',name:'Verified',symbol:'☑️',color:'#3ba55c',description:'Verified LiteCord account.'},
+  dev:{id:'dev',name:'Developer',symbol:'🔧',color:'#9b59b6',description:'LiteCord developer. Grants access to developer tools.'}
+};
+function mergeBadgeCatalog(serverBadges={}) {
+  return {...BUILTIN_BADGES,...(serverBadges && typeof serverBadges==='object' ? serverBadges : {})};
+}
+
 /* ================================================================
    Building blocks: avatar (with frame), name (with badges)
    ================================================================ */
@@ -1017,7 +1042,7 @@ function tabBadges() {
   const selectedShown = new Set((Array.isArray(S.me.shownBadges) ? S.me.shownBadges : ownedIds).filter(id => ownedIds.includes(id)).slice(0, maxShown));
   const shownControls = h('div', { class: 'acct', style: 'padding:14px;margin-bottom:14px' }, h('h3', null, `Show next to name (up to ${maxShown})`), ...ownedIds.map(id => { const b=S.catalog.badges[id]; return h('label',{style:'display:flex;align-items:center;gap:8px;padding:6px 0'},h('input',{type:'checkbox',checked:selectedShown.has(id),onchange:async e=>{const checkbox=e.target;const before=new Set(Array.isArray(S.me.shownBadges)?S.me.shownBadges:ownedIds);const next=new Set(before);if(checkbox.checked){if(next.size>=maxShown){checkbox.checked=false;toast(`Your role allows ${maxShown} shown badge(s).`);return;}next.add(id);}else next.delete(id);const nextArray=[...next];S.me={...S.me,shownBadges:nextArray};S.users.set(S.me.id,S.me);renderUserbar();renderMembers();renderMessages(true);try{const response=await api('PATCH','/api/me',{shownBadges:nextArray});if(response?.me && typeof response.me==='object'){applyMe({...response.me,shownBadges:nextArray});}else applyMe({shownBadges:nextArray});renderSettings();}catch(x){S.me={...S.me,shownBadges:[...before]};S.users.set(S.me.id,S.me);toast(x.message,'err');renderSettings();}}}),h('span',{style:`color:${b.color}`},b.symbol),b.name); }));
   return [h('h2', null, 'Badges'),
-    h('p', { class: 'sub' }, 'Choose which badges appear next to your name. Your account tier sets the maximum.'),
+    h('p', { class: 'sub' }, 'Badges are granted by LiteCord developers or verified eligibility systems. You can only choose which earned badges appear next to your name.'),
     shownControls, h('div', { class: 'bpreview' }, avatar(S.me, 40), nameEl(S.me, 'big')),
     h('div', { class: 'badge-grid' }, Object.values(S.catalog.badges).map(b => {
       const has = owned.has(b.id);
@@ -1047,7 +1072,7 @@ function tabDevtools() {
     if (!target.value.trim()) { err.textContent = 'Enter the username of the person receiving this badge.'; target.focus(); return; }
     try {
       const r = await api('POST', '/api/dev/badges', { username: target.value.trim(), name: name.value, symbol: symbol.value, color: color.value, description: desc.value, permissions:{ban:permBan.checked,kick:permKick.checked,mute:permMute.checked} });
-      S.catalog.badges = r.catalog.badges;
+      S.catalog.badges = mergeBadgeCatalog(r.catalog?.badges);
       if (r.user.id === S.me.id) applyMe(r.user);
       else S.users.set(r.user.id, r.user);
       toast('Badge created and granted to @' + r.user.username);
@@ -1188,7 +1213,7 @@ function init(d) {
   d = d && typeof d === 'object' ? d : {};
   S.me = d.me && typeof d.me === 'object' ? d.me : { id: 'local-user', username: 'User', displayName: 'User', badges: [], shownBadges: [] };
   S.catalog = d.catalog && typeof d.catalog === 'object' ? d.catalog : { badges: {}, frames: {} };
-  S.catalog.badges = S.catalog.badges && typeof S.catalog.badges === 'object' ? S.catalog.badges : {};
+  S.catalog.badges = mergeBadgeCatalog(S.catalog.badges);
   const fallbackServer = d.server && typeof d.server === 'object' ? d.server : { id: 'general', name: 'LiteCord', channels: [], level: 0, boosts: 0 };
   S.server = fallbackServer;
   S.servers = (Array.isArray(d.servers) ? d.servers : []).filter(s => s && typeof s === 'object');
