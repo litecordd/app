@@ -88,7 +88,7 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .app.nomembers{grid-template-columns:72px 240px minmax(0,1fr)}
 .app.nomembers .members{display:none}
 .rail{background:var(--bg3);display:flex;flex-direction:column;align-items:center;padding-top:12px}
-.srv{width:48px;height:48px;border-radius:var(--r3);background:var(--blurple);color:#fff;display:grid;place-items:center;font-weight:700;font-size:20px;border:0}
+.srv{position:relative;width:48px;height:48px;border-radius:var(--r3);background:var(--blurple);color:#fff;display:grid;place-items:center;font-weight:700;font-size:20px;border:0}
 .side{background:var(--bg2);display:flex;flex-direction:column;min-height:0}
 .side-head{height:48px;flex:none;display:flex;align-items:center;padding:0 16px;font-weight:700;color:var(--head);box-shadow:0 1px 0 rgba(0,0,0,.25)}
 .channels{flex:1;overflow:auto;padding:8px}
@@ -461,7 +461,10 @@ function renderServersRail() {
     class: 'srv' + (S.server && S.server.id === s.id ? ' selected' : ''),
     title: s.name, 'aria-label': 'Switch to ' + s.name,
     onclick: () => switchServer(s.id)
-  }, [...s.name.trim()][0]?.toUpperCase() || 'S')));
+  }, [...s.name.trim()][0]?.toUpperCase() || 'S', ...(Array.isArray(s.badges) ? s.badges : []).map(bid => {
+    const badge = S.catalog?.badges?.[bid];
+    return badge ? h('span', { class: 'badge server-badge', title: badge.name, 'aria-label': badge.name, style: `color:${badge.color};margin:0;position:absolute;right:-3px;bottom:-3px;background:var(--bg);border-radius:50%;padding:2px` }, badge.symbol) : null;
+  }).filter(Boolean))));
 }
 async function switchServer(id) {
   try {
@@ -505,7 +508,8 @@ function renderServer() {
   const b = $('#srvhead');
   if (!s) { b.className = 'side-head'; b.replaceChildren('LiteCord'); return; }
   b.className = 'side-head lv' + (s.level || 0);
-  b.replaceChildren(s.name, h('small', null, s.level ? 'Level ' + s.level : '❖ ' + s.boosts));
+  const serverBadges = (Array.isArray(s.badges) ? s.badges : []).map(id => S.catalog?.badges?.[id]).filter(Boolean);
+  b.replaceChildren(s.name, ...serverBadges.map(badge => h('span', { class: 'badge', title: badge.name, 'aria-label': badge.name, style: `color:${badge.color}` }, badge.symbol)), h('small', null, s.level ? 'Level ' + s.level : '❖ ' + s.boosts));
   $('#srvhead').title = 'Boost this server';
   $('.side .side-head').className = 'side-head lv' + s.level;
   renderServersRail();
@@ -1030,7 +1034,7 @@ function tabDevtools() {
   const joinServerErr=h('div',{class:'err'});
   api('GET','/api/dev/servers').then(d=>joinServerSelect.replaceChildren(...d.servers.map(s=>h('option',{value:s.id,disabled:s.joined||s.banned},s.name+(s.joined?' (joined)':s.banned?' (banned)':''))))).catch(e=>{joinServerErr.textContent=e.message;});
   const joinServerForm=h('form',{onsubmit:async e=>{e.preventDefault();joinServerErr.textContent='';if(!joinServerSelect.value){joinServerErr.textContent='Choose a server first.';return;}try{const d=await api('POST',`/api/dev/servers/${encodeURIComponent(joinServerSelect.value)}/join`,{});S.server=d.server;S.servers=d.servers;S.channels=d.channels;S.channelsByServer.set(d.server.id,d.channels);S.me={...S.me,...d.me};S.users.set(S.me.id,S.me);S.channelId=S.channels[0]?.id||null;S.messages=new Map();S.loaded=new Set();renderServersRail();renderAll();if(S.channelId)await selectChannel(S.channelId);toast('Joined server');renderSettings();}catch(x){joinServerErr.textContent=x.message;}}},field('Server to join',joinServerSelect),joinServerErr,h('button',{class:'btn',type:'submit'},'Join server'));
-  const target = h('input', { type: 'text', maxlength: 20, placeholder: 'Username (leave blank for yourself)' });
+  const target = h('input', { type: 'text', maxlength: 20, placeholder: 'Username to receive this badge', required: true });
   const name = h('input', { type: 'text', maxlength: 32, placeholder: 'Early Supporter', required: true });
   const symbol = h('input', { type: 'text', maxlength: 4, placeholder: '✦', required: true });
   const color = h('input', { type: 'color', value: '#f0b232' });
@@ -1040,6 +1044,7 @@ function tabDevtools() {
   const err = h('div', { class: 'err', role: 'alert' });
   const form = h('form', { onsubmit: async e => {
     e.preventDefault(); err.textContent = '';
+    if (!target.value.trim()) { err.textContent = 'Enter the username of the person receiving this badge.'; target.focus(); return; }
     try {
       const r = await api('POST', '/api/dev/badges', { username: target.value.trim(), name: name.value, symbol: symbol.value, color: color.value, description: desc.value, permissions:{ban:permBan.checked,kick:permKick.checked,mute:permMute.checked} });
       S.catalog.badges = r.catalog.badges;
@@ -1048,7 +1053,7 @@ function tabDevtools() {
       toast('Badge created and granted to @' + r.user.username);
       renderSettings();
     } catch (x) { err.textContent = x.message; }
-  } }, field('Give badge to username', target, 'Only the Developer role can use this tool. Leave blank to grant it to yourself.'),
+  } }, field('Give badge to username', target, 'Only developers can grant badges. Enter another member’s username.'),
       field('Badge name', name), field('Badge symbol', symbol, 'Use 1–4 characters, such as ⛊ or ✦.'),
       field('Badge color', color), field('Description', desc), badgePerms, err,
       h('button', { class: 'btn block', type: 'submit' }, 'Create badge and grant it'));
@@ -1058,6 +1063,10 @@ function tabDevtools() {
   const grantForm=h('form',{onsubmit:async e=>{e.preventDefault();grantErr.textContent='';try{const r=await api('POST','/api/dev/badges/grant',{username:existingUser.value,badgeId:existingSelect.value});if(r.user.id===S.me.id)applyMe(r.user);else S.users.set(r.user.id,r.user);toast('Existing badge granted');}catch(x){grantErr.textContent=x.message;}}},field('Give an existing badge to username',existingUser),field('Existing badge',existingSelect),grantErr,h('button',{class:'btn',type:'submit'},'Give existing badge'));
   const chSelect=h('select',{},S.channels.map(c=>h('option',{value:c.id},'#'+c.name)));
   const channelBadgeSelect=h('select',{},Object.values(S.catalog.badges).map(b=>h('option',{value:b.id},b.symbol+' '+b.name)));
+  const serverBadgeServer=h('select',{},(Array.isArray(S.servers)?S.servers:[]).map(server=>h('option',{value:server.id},server.name)));
+  const serverBadgeSelect=h('select',{},Object.values(S.catalog.badges).map(b=>h('option',{value:b.id},b.symbol+' '+b.name)));
+  const serverBadgeErr=h('div',{class:'err'});
+  const serverBadgeGrant=h('form',{onsubmit:async e=>{e.preventDefault();serverBadgeErr.textContent='';try{const serverId=serverBadgeServer.value;if(!serverId)throw new Error('No server is available.');const r=await api('POST',`/api/dev/servers/${encodeURIComponent(serverId)}/badges`,{badgeId:serverBadgeSelect.value});const updated=r.server||r;S.servers=(S.servers||[]).map(server=>server.id===serverId?{...server,...updated}:server);if(S.server?.id===serverId)S.server={...S.server,...updated};renderServersRail();renderServer();toast('Badge added to server');}catch(x){serverBadgeErr.textContent=x.message;}}},field('Server',serverBadgeServer),field('Existing badge',serverBadgeSelect),serverBadgeErr,h('button',{class:'btn',type:'submit'},'Give badge to server'));
   const chErr=h('div',{class:'err'});
   const channelGrant=h('form',{onsubmit:async e=>{e.preventDefault();chErr.textContent='';try{const r=await api('POST',`/api/dev/channels/${encodeURIComponent(chSelect.value)}/badges`,{badgeId:channelBadgeSelect.value});S.channels=S.channels.map(c=>c.id===r.channel.id?r.channel:c);S.channelsByServer.set(S.server.id,S.channels);renderChannels();renderHeader();toast('Badge added to channel');}catch(x){chErr.textContent=x.message;}}},field('Channel',chSelect),field('Existing badge',channelBadgeSelect),chErr,h('button',{class:'btn',type:'submit'},'Give badge to channel'));
   const channelCreateName=h('input',{type:'text',maxlength:32,placeholder:'Special channel',required:true});const channelCreateSym=h('input',{type:'text',maxlength:4,placeholder:'✦',required:true});const channelCreateColor=h('input',{type:'color',value:'#f0b232'});const channelCreateDesc=h('input',{type:'text',maxlength:100,placeholder:'Badge description'});const channelCreateErr=h('div',{class:'err'});
@@ -1074,8 +1083,8 @@ function tabDevtools() {
   const existing = h('div', { class: 'badge-grid' }, Object.values(S.catalog.badges).map(b =>
     h('div', { class: 'bcard has' }, h('div', { class: 'bsym', style: `color:${b.color}` }, b.symbol),
       h('div', null, h('div', { class: 'bname' }, b.name), h('div', { class: 'bdesc' }, b.description || 'Custom badge')))));
-  return [h('h2', null, 'Developer Tools'), h('p', { class: 'sub' }, 'Create custom badges and grant them to any registered user. This panel is only shown to the Developer role.'),
-    h('div',{class:'acct',style:'padding:18px;margin-bottom:16px'},h('h3',null,'Join a server'),h('p',{class:'hint'},'Developers can join existing servers to help manage channel names.'),joinServerForm), h('div', { class: 'acct', style: 'padding:18px' }, form), h('div',{class:'acct',style:'padding:18px;margin-top:16px'},h('h3',null,'Give an existing badge'),grantForm), h('div',{class:'acct',style:'padding:18px;margin-top:16px'},h('h3',null,'Give badges to channels'),channelGrant,h('hr'),h('h3',null,'Create a badge for a channel'),channelCreate), h('div',{class:'acct',style:'padding:18px;margin-top:16px'},h('h3',null,'Rename a channel'),renameChannelForm,h('hr'),h('h3',null,'Moderation actions'),h('p',{class:'hint'},'Actions require a badge whose permissions allow the selected action.'),moderationForm), h('h3', null, 'Badge catalog'), existing];
+  return [h('h2', null, 'Developer Tools'), h('p', { class: 'sub' }, 'Create custom badges and grant them to registered users. Only developers can grant badges; the backend must enforce this permission on every badge endpoint.'),
+    h('div',{class:'acct',style:'padding:18px;margin-bottom:16px'},h('h3',null,'Join a server'),h('p',{class:'hint'},'Developers can join existing servers to help manage channel names.'),joinServerForm), h('div', { class: 'acct', style: 'padding:18px' }, form), h('div',{class:'acct',style:'padding:18px;margin-top:16px'},h('h3',null,'Give an existing badge'),grantForm), h('div',{class:'acct',style:'padding:18px;margin-top:16px'},h('h3',null,'Give badges to servers'),serverBadgeGrant,h('hr'),h('h3',null,'Give badges to channels'),channelGrant,h('hr'),h('h3',null,'Create a badge for a channel'),channelCreate), h('div',{class:'acct',style:'padding:18px;margin-top:16px'},h('h3',null,'Rename a channel'),renameChannelForm,h('hr'),h('h3',null,'Moderation actions'),h('p',{class:'hint'},'Actions require a badge whose permissions allow the selected action.'),moderationForm), h('h3', null, 'Badge catalog'), existing];
 }
 function tabServerRoles() {
   const s=S.server;
