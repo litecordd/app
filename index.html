@@ -258,7 +258,8 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
 .mobile-nav-toggle{display:none;flex:none}
 @media(max-width:760px){
   .app,.app.nomembers{grid-template-columns:56px minmax(0,1fr)}
-  .rail{grid-column:1;grid-row:1;position:relative;z-index:21;padding:8px 4px;gap:8px}
+  /* The tablet rule above hides the rail; explicitly restore it on phones. */
+  .rail{display:flex!important;grid-column:1;grid-row:1;position:relative;z-index:21;padding:8px 4px;gap:8px}
   .rail .srv{width:42px;height:42px;flex:none;border-radius:14px}
   .rail .iconbtn{width:42px!important;height:42px!important;margin-top:4px!important}
   .side{position:fixed;z-index:20;left:56px;top:0;bottom:0;width:min(280px,calc(100vw - 56px));box-shadow:12px 0 32px #0008;transform:translateX(-120%);transition:transform .18s ease}
@@ -354,12 +355,18 @@ function h(tag, props, ...kids) {
 async function api(method, url, body) {
   const opt = { method, headers: { 'Content-Type': 'application/json' } };
   if (method !== 'GET') opt.body = JSON.stringify(body || {});
-  const r = await fetch(url, opt);
+  let r;
+  try { r = await fetch(url, opt); }
+  catch (cause) {
+    console.error('[LiteCord] Network request failed:', method, url, cause);
+    throw new Error('Cannot connect to LiteCord. Check that the server is running.');
+  }
   let data = null;
-  try { data = await r.json(); } catch { /* no body */ }
+  try { data = await r.json(); } catch { /* endpoint returned no JSON */ }
   if (!r.ok) {
-    const e = new Error((data && data.error) || 'Request failed.');
+    const e = new Error((data && (data.error || data.message)) || `Request failed (${r.status}) for ${url}`);
     e.status = r.status;
+    console.error('[LiteCord] API error:', method, url, r.status, data);
     throw e;
   }
   return data;
@@ -786,7 +793,8 @@ $('#srvhead').addEventListener('click', openBoost);
    Live updates
    ================================================================ */
 function applyMe(me) {
-  S.me = { ...S.me, ...me };
+  const previousShown = Array.isArray(S.me?.shownBadges) ? S.me.shownBadges : [];
+  S.me = { ...S.me, ...me, shownBadges: Array.isArray(me?.shownBadges) ? me.shownBadges : previousShown };
   S.users.set(S.me.id, S.me);
   renderUserbar(); renderMembers(); renderMessages(true);
   if (S.settings && ['frames', 'badges', 'nitro'].includes(S.settings.tab)) renderSettings();
@@ -794,7 +802,7 @@ function applyMe(me) {
 
 function onUser(u) {
   const prev = S.users.get(u.id);
-  const visual = !prev || ['displayName', 'avatarColor', 'frame', 'badges'].some(k => JSON.stringify(prev[k]) !== JSON.stringify(u[k]));
+  const visual = !prev || ['displayName', 'avatarColor', 'frame', 'badges', 'shownBadges'].some(k => JSON.stringify(prev[k]) !== JSON.stringify(u[k]));
   if (u.id === S.me.id) { applyMe(u); return; }
   if (!S.users.has(u.id)) return;
   S.users.set(u.id, u);
@@ -1003,7 +1011,7 @@ function tabBadges() {
   const ownedIds = Object.keys(S.catalog.badges).filter(id => owned.has(id));
   const maxShown = owned.has('dev') ? 3 : owned.has('nitro') ? 2 : 1;
   const selectedShown = new Set((Array.isArray(S.me.shownBadges) ? S.me.shownBadges : ownedIds).filter(id => ownedIds.includes(id)).slice(0, maxShown));
-  const shownControls = h('div', { class: 'acct', style: 'padding:14px;margin-bottom:14px' }, h('h3', null, `Show next to name (up to ${maxShown})`), ...ownedIds.map(id => { const b=S.catalog.badges[id]; return h('label',{style:'display:flex;align-items:center;gap:8px;padding:6px 0'},h('input',{type:'checkbox',checked:selectedShown.has(id),onchange:async e=>{const checkbox=e.target;const before=new Set(Array.isArray(S.me.shownBadges)?S.me.shownBadges:ownedIds);const next=new Set(before);if(checkbox.checked){if(next.size>=maxShown){checkbox.checked=false;toast(`Your role allows ${maxShown} shown badge(s).`);return;}next.add(id);}else next.delete(id);const nextArray=[...next];S.me={...S.me,shownBadges:nextArray};S.users.set(S.me.id,S.me);renderUserbar();renderMembers();renderMessages(true);try{const response=await api('PATCH','/api/me',{shownBadges:nextArray});if(response?.me && typeof response.me==='object'){const returned=Array.isArray(response.me.shownBadges)?response.me.shownBadges:nextArray;applyMe({...response.me,shownBadges:returned});}else applyMe({shownBadges:nextArray});renderSettings();}catch(x){S.me={...S.me,shownBadges:[...before]};S.users.set(S.me.id,S.me);toast(x.message,'err');renderSettings();}}}),h('span',{style:`color:${b.color}`},b.symbol),b.name); }));
+  const shownControls = h('div', { class: 'acct', style: 'padding:14px;margin-bottom:14px' }, h('h3', null, `Show next to name (up to ${maxShown})`), ...ownedIds.map(id => { const b=S.catalog.badges[id]; return h('label',{style:'display:flex;align-items:center;gap:8px;padding:6px 0'},h('input',{type:'checkbox',checked:selectedShown.has(id),onchange:async e=>{const checkbox=e.target;const before=new Set(Array.isArray(S.me.shownBadges)?S.me.shownBadges:ownedIds);const next=new Set(before);if(checkbox.checked){if(next.size>=maxShown){checkbox.checked=false;toast(`Your role allows ${maxShown} shown badge(s).`);return;}next.add(id);}else next.delete(id);const nextArray=[...next];S.me={...S.me,shownBadges:nextArray};S.users.set(S.me.id,S.me);renderUserbar();renderMembers();renderMessages(true);try{const response=await api('PATCH','/api/me',{shownBadges:nextArray});if(response?.me && typeof response.me==='object'){applyMe({...response.me,shownBadges:nextArray});}else applyMe({shownBadges:nextArray});renderSettings();}catch(x){S.me={...S.me,shownBadges:[...before]};S.users.set(S.me.id,S.me);toast(x.message,'err');renderSettings();}}}),h('span',{style:`color:${b.color}`},b.symbol),b.name); }));
   return [h('h2', null, 'Badges'),
     h('p', { class: 'sub' }, 'Choose which badges appear next to your name. Your account tier sets the maximum.'),
     shownControls, h('div', { class: 'bpreview' }, avatar(S.me, 40), nameEl(S.me, 'big')),
@@ -1143,11 +1151,14 @@ async function openDMs() {
     if (!users.length) list.append(h('p',{class:'hint'},'No other members yet. Ask a friend to register.'));
     users.forEach(u => list.append(h('button',{class:'mem',style:'width:100%;background:var(--bg2)',onclick:()=>openDM(u.id)},avatar(u,32),nameEl(u),h('span',{style:'margin-left:auto;color:var(--muted)'},'Message →'))));
     openModal(h('div',{class:'panel'},h('h2',null,'Private messages'),h('p',{class:'hint'},'Choose a LiteCord member to open a private conversation.'),list));
-  } catch(e) { toast(e.message,'err'); }
+  } catch(e) { console.error('[LiteCord] Could not load DM users:', e); toast(e.message,'err'); }
 }
 async function openDM(userId) {
   try {
-    const {user,messages} = await api('GET','/api/dms/'+encodeURIComponent(userId));
+    const response = await api('GET','/api/dms/'+encodeURIComponent(userId));
+    const user = response?.user;
+    const messages = Array.isArray(response?.messages) ? response.messages : [];
+    if (!user || !user.id) throw new Error('The DM endpoint did not return a valid user.');
     const box = h('div',{style:'max-height:45vh;overflow:auto;margin:14px 0;display:flex;flex-direction:column;gap:10px'});
     const render = arr => { box.replaceChildren(...arr.map(m=>h('div',{style:'background:var(--bg2);padding:10px 12px;border-radius:14px'},h('div',{style:'font-size:12px;color:var(--muted);margin-bottom:4px'},(m.userId===S.me.id?'You':user.displayName)+' · '+timeStr(m.ts)),h('div',{style:'white-space:pre-wrap;overflow-wrap:anywhere'},m.content)))); if(!arr.length)box.append(h('p',{class:'hint'},'This is the start of your private conversation.'));box.scrollTop=box.scrollHeight;};
     render(messages);
@@ -1155,7 +1166,7 @@ async function openDM(userId) {
     const err=h('div',{class:'err'});
     const form=h('form',{style:'display:flex;flex-direction:column;gap:8px',onsubmit:async e=>{e.preventDefault();const content=input.value.trim();if(!content)return;try{const response=await api('POST','/api/dms/'+encodeURIComponent(userId),{content});if(response?.message)messages.push(response.message);input.value='';err.textContent='';render(messages);}catch(x){err.textContent=x.message;}}},input,h('button',{class:'btn',type:'submit',style:'align-self:flex-end;min-width:90px'},'Send'),err);
     openModal(h('div',{class:'panel'},h('div',{style:'display:flex;align-items:center;gap:10px'},avatar(user,40),h('div',null,h('h2',null,user.displayName),h('div',{class:'hint'},'@'+user.username))),box,form,h('div',{class:'row'},h('button',{class:'btn sec',onclick:openDMs},'All DMs'))));
-  } catch(e) { toast(e.message,'err'); }
+  } catch(e) { console.error('[LiteCord] Could not open DM:', e); toast(e.message,'err'); }
 }
 $('#openDMs').addEventListener('click',openDMs);
 
